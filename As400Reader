@@ -1,0 +1,81 @@
+using System;
+using System.Data;
+using java.sql;
+
+public class As400DapperReader : IDataReader
+{
+    private readonly ResultSet _resultSet;
+
+    public As400DapperReader(ResultSet resultSet)
+    {
+        _resultSet = resultSet ?? throw new ArgumentNullException(nameof(resultSet));
+    }
+
+    public bool Read() => _resultSet.next();
+
+    public int FieldCount => _resultSet.getMetaData().getColumnCount();
+
+    public object GetValue(int i) => _resultSet.getObject(i + 1);
+
+    public string GetName(int i) => _resultSet.getMetaData().getColumnName(i + 1);
+
+    public int GetOrdinal(string name)
+    {
+        var metaData = _resultSet.getMetaData();
+        for (int i = 1; i <= metaData.getColumnCount(); i++)
+        {
+            if (metaData.getColumnName(i).Equals(name, StringComparison.OrdinalIgnoreCase))
+                return i - 1;
+        }
+        throw new IndexOutOfRangeException($"Kolom '{name}' tidak ditemukan.");
+    }
+
+    public bool IsDBNull(int i) => _resultSet.getObject(i + 1) == null;
+
+    public void Close() => _resultSet.close();
+    public DataTable GetSchemaTable() => throw new NotImplementedException();
+    public bool NextResult() => throw new NotImplementedException();
+    public void Dispose() => _resultSet.close();
+
+    public int Depth => 0;
+    public bool IsClosed => false;
+    public int RecordsAffected => -1;
+
+    public string GetString(int i) => _resultSet.getString(i + 1);
+    public int GetInt32(int i) => _resultSet.getInt(i + 1);
+    public long GetInt64(int i) => _resultSet.getLong(i + 1);
+    public double GetDouble(int i) => _resultSet.getDouble(i + 1);
+    public decimal GetDecimal(int i) => (decimal)_resultSet.getBigDecimal(i + 1);
+    public DateTime GetDateTime(int i) => _resultSet.getTimestamp(i + 1).toInstant().ToDateTimeUtc();
+
+    public object this[int i] => GetValue(i);
+    public object this[string name] => GetValue(GetOrdinal(name));
+
+    public float GetFloat(int i) => _resultSet.getFloat(i + 1);
+    public bool GetBoolean(int i) => _resultSet.getBoolean(i + 1);
+    public short GetInt16(int i) => _resultSet.getShort(i + 1);
+    public byte GetByte(int i) => (byte)_resultSet.getShort(i + 1);
+    public Guid GetGuid(int i) => Guid.Parse(_resultSet.getString(i + 1));
+
+    public Type GetFieldType(int i)
+    {
+        string columnType = _resultSet.getMetaData().getColumnTypeName(i + 1).ToLower();
+        return columnType switch
+        {
+            "varchar" or "char" => typeof(string),
+            "integer" or "int" => typeof(int),
+            "bigint" => typeof(long),
+            "smallint" => typeof(short),
+            "decimal" or "numeric" => typeof(decimal),
+            "double" or "float" => typeof(double),
+            "timestamp" or "date" => typeof(DateTime),
+            "boolean" => typeof(bool),
+            _ => typeof(object)
+        };
+    }
+
+    public long GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length) => throw new NotImplementedException();
+    public long GetChars(int i, long fieldOffset, char[] buffer, int bufferoffset, int length) => throw new NotImplementedException();
+    public string GetDataTypeName(int i) => _resultSet.getMetaData().getColumnTypeName(i + 1);
+    public IDataReader GetData(int i) => throw new NotImplementedException();
+}
