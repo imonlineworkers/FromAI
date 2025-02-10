@@ -62,22 +62,24 @@ public class As400DapperReader : IDataReader
 
     // ✅ FIX GetFieldType
     public Type GetFieldType(int i)
-    {
-        string columnType = _resultSet.getMetaData().getColumnTypeName(i + 1)?.ToLower();
+{
+    string columnType = _resultSet.getMetaData().getColumnTypeName(i + 1);
+    if (columnType == null) return typeof(object);
 
-        return columnType switch
-        {
-            "varchar" or "char" => typeof(string),
-            "integer" or "int" => typeof(int),
-            "bigint" => typeof(long),
-            "smallint" => typeof(short),
-            "decimal" or "numeric" => typeof(decimal),
-            "double" or "float" => typeof(double),
-            "timestamp" or "date" => typeof(DateTime),
-            "boolean" => typeof(bool),
-            _ => typeof(object)
-        };
-    }
+    columnType = columnType.ToLower();
+
+    if (columnType == "varchar" || columnType == "char") return typeof(string);
+    if (columnType == "integer" || columnType == "int") return typeof(int);
+    if (columnType == "bigint") return typeof(long);
+    if (columnType == "smallint") return typeof(short);
+    if (columnType == "decimal" || columnType == "numeric") return typeof(decimal);
+    if (columnType == "double" || columnType == "float") return typeof(double);
+    if (columnType == "timestamp" || columnType == "date") return typeof(DateTime);
+    if (columnType == "boolean") return typeof(bool);
+
+    return typeof(object);
+}
+
 
     public object this[int i] => GetValue(i);
     public object this[string name] => GetValue(GetOrdinal(name));
