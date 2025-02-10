@@ -1,0 +1,57 @@
+public class As400DapperConnection : IDbConnection
+{
+    private readonly AS400JDBCConnection _jdbcConnection;
+
+    public As400DapperConnection(AS400JDBCConnection jdbcConnection)
+    {
+        _jdbcConnection = jdbcConnection;
+    }
+
+    public async Task<List<Dictionary<string, object>>> QueryAsync(string sql, object param = null)
+    {
+        using (var command = _jdbcConnection.prepareStatement(sql))
+        {
+            if (param != null)
+            {
+                SetParameters(command, param);
+            }
+
+            using (var reader = command.executeQuery())
+            {
+                var result = new List<Dictionary<string, object>>();
+                var columnCount = reader.getMetaData().getColumnCount();
+
+                while (reader.next())
+                {
+                    var row = new Dictionary<string, object>();
+
+                    for (int i = 1; i <= columnCount; i++)
+                    {
+                        string columnName = reader.getMetaData().getColumnName(i);
+                        object value = reader.getObject(i);
+                        row[columnName] = value == DBNull.Value ? null : value;
+                    }
+
+                    result.Add(row);
+                }
+
+                return await Task.FromResult(result);
+            }
+        }
+    }
+
+    private void SetParameters(PreparedStatement command, object param)
+    {
+        var properties = param.GetType().GetProperties();
+        for (int i = 0; i < properties.Length; i++)
+        {
+            var value = properties[i].GetValue(param);
+            command.setObject(i + 1, value);
+        }
+    }
+
+    public void Dispose()
+    {
+        _jdbcConnection.close();
+    }
+}
