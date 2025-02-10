@@ -4,26 +4,58 @@ using java.sql;
 
 public class As400DapperCommand : IDbCommand
 {
-    private readonly Statement _jdbcStatement;
+    private readonly Connection _connection;
+    private PreparedStatement _command;
+    private string _commandText;
 
-    public As400DapperCommand(Statement jdbcStatement)
+    public As400DapperCommand(Connection connection)
     {
-        _jdbcStatement = jdbcStatement;
+        _connection = connection ?? throw new ArgumentNullException(nameof(connection));
     }
 
-    public void Dispose() => _jdbcStatement.close();
-    public void Cancel() => throw new NotImplementedException();
-    public IDbDataParameter CreateParameter() => throw new NotImplementedException();
-    public int ExecuteNonQuery() => throw new NotImplementedException();
-    public IDataReader ExecuteReader() => new As400DapperReader(_jdbcStatement.executeQuery());
-    public IDataReader ExecuteReader(CommandBehavior behavior) => ExecuteReader();
-    public object ExecuteScalar() => throw new NotImplementedException();
-    public void Prepare() => throw new NotImplementedException();
-    public string CommandText { get; set; }
-    public int CommandTimeout { get; set; }
-    public CommandType CommandType { get; set; }
-    public IDbConnection Connection { get; set; }
+    public string CommandText
+    {
+        get => _commandText;
+        set
+        {
+            _commandText = value;
+            _command?.close(); // Tutup statement lama kalau ada perubahan query
+            _command = _connection.prepareStatement(_commandText);
+        }
+    }
+
+    public IDataReader ExecuteReader()
+    {
+        if (string.IsNullOrEmpty(CommandText))
+            throw new InvalidOperationException("Query (CommandText) tidak boleh kosong!");
+
+        if (_command == null)
+            _command = _connection.prepareStatement(CommandText);
+
+        return new As400DapperReader(_command.executeQuery());
+    }
+
+    public int ExecuteNonQuery()
+    {
+        if (string.IsNullOrEmpty(CommandText))
+            throw new InvalidOperationException("Query (CommandText) tidak boleh kosong!");
+
+        if (_command == null)
+            _command = _connection.prepareStatement(CommandText);
+
+        return _command.executeUpdate();
+    }
+
+    public void Dispose() => _command?.close();
+
+    public CommandType CommandType { get; set; } = CommandType.Text;
+    public IDbConnection Connection { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public IDataParameterCollection Parameters => throw new NotImplementedException();
+    public int CommandTimeout { get; set; }
     public IDbTransaction Transaction { get; set; }
     public UpdateRowSource UpdatedRowSource { get; set; }
+
+    public void Cancel() => throw new NotImplementedException();
+    public IDbDataParameter CreateParameter() => throw new NotImplementedException();
+    public void Prepare() => throw new NotImplementedException();
 }
