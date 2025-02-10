@@ -1,0 +1,61 @@
+using System;
+using System.Data;
+using System.Threading.Tasks;
+using Dapper;
+using Java.Sql;
+
+public class As400DapperConnection : IDbConnection
+{
+    private readonly Connection _jdbcConnection;
+
+    public As400DapperConnection(Connection jdbcConnection)
+    {
+        _jdbcConnection = jdbcConnection ?? throw new ArgumentNullException(nameof(jdbcConnection));
+    }
+
+    public Connection GetJdbcConnection() => _jdbcConnection;
+
+    public IDbTransaction BeginTransaction() => throw new NotImplementedException();
+    public IDbTransaction BeginTransaction(IsolationLevel il) => throw new NotImplementedException();
+    public void ChangeDatabase(string databaseName) => throw new NotImplementedException();
+    public void Close() => _jdbcConnection.Close();
+    public IDbCommand CreateCommand() => throw new NotImplementedException();
+    public void Dispose() => _jdbcConnection.Dispose();
+    public void Open() { /* JDBC connection sudah otomatis open */ }
+    public ConnectionState State => _jdbcConnection.isClosed() ? ConnectionState.Closed : ConnectionState.Open;
+
+    public Task<IEnumerable<T>> QueryAsync<T>(string sql, object param = null)
+    {
+        using (var command = _jdbcConnection.prepareStatement(sql))
+        using (var reader = command.executeQuery())
+        {
+            var result = new List<T>();
+
+            while (reader.next())
+            {
+                // Convert reader ke object T (manual karena JDBC nggak support langsung)
+                var obj = Activator.CreateInstance<T>();
+                foreach (var prop in typeof(T).GetProperties())
+                {
+                    var value = reader.getObject(prop.Name);
+                    if (value != DBNull.Value)
+                    {
+                        prop.SetValue(obj, value);
+                    }
+                }
+                result.Add(obj);
+            }
+
+            return Task.FromResult(result.AsEnumerable());
+        }
+    }
+
+    public Task<int> ExecuteAsync(string sql, object param = null)
+    {
+        using (var command = _jdbcConnection.prepareStatement(sql))
+        {
+            int rowsAffected = command.executeUpdate();
+            return Task.FromResult(rowsAffected);
+        }
+    }
+}
