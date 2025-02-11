@@ -1,0 +1,18 @@
+using SimpleInjector;
+using Microsoft.Extensions.Configuration;
+
+public static class DependencyInjection
+{
+    public static void ConfigureServices(Container container, IConfiguration configuration)
+    {
+        // Bind ke AppSettings class dari Web.config / appsettings.json
+        var appSettings = new AppSettings();
+        configuration.Bind("appSettings", appSettings);
+        container.RegisterInstance(appSettings);
+
+        // Register Authentication Service
+        container.Register<IAuthenticationService, AuthenticationService>(Lifestyle.Singleton);
+
+        container.Verify();
+    }
+}
