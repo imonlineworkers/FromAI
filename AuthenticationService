@@ -1,0 +1,27 @@
+using com.ibm.as400.access;
+using System;
+
+public class AuthenticationService : IAuthenticationService
+{
+    private readonly string _systemName;
+
+    public AuthenticationService(AppSettings settings)
+    {
+        _systemName = settings.AS400ServerName;
+    }
+
+    public bool ValidateSignOn(string username, string password)
+    {
+        try
+        {
+            AS400 system = new AS400(_systemName, username, password);
+            system.validateSignon();
+            system.disconnectAllServices();
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+}
