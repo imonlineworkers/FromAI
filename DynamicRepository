@@ -12,56 +12,52 @@ public class DynamicRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<DataTable> ExecuteQueryAsync(string query, List<object> parameters)
+    public async Task<List<Dictionary<string, object>>> ExecuteQueryAsync(string query, List<object> parameters = null)
+{
+    var result = new List<Dictionary<string, object>>();
+    Connection conn = null;
+    PreparedStatement stmt = null;
+    ResultSet rs = null;
+
+    await Task.Run(() =>
     {
-        var dataTable = new DataTable();
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-
-        await Task.Run(() =>
+        try
         {
-            try
-            {
-                conn = _connectionFactory.GetConnection();
-                stmt = conn.PrepareStatement(query);
+            conn = _connectionFactory.GetConnection();
+            stmt = conn.PrepareStatement(query);
 
-                // Bind parameters ke query
+            // Bind parameter
+            if (parameters != null)
+            {
                 for (int i = 0; i < parameters.Count; i++)
                 {
-                    stmt.SetObject(i + 1, parameters[i]); // Index di JDBC mulai dari 1
+                    stmt.SetObject(i + 1, parameters[i]);
                 }
+            }
 
-                rs = stmt.ExecuteQuery();
-                var metaData = rs.GetMetaData();
-                int columnCount = metaData.GetColumnCount();
+            rs = stmt.ExecuteQuery();
+            var metaData = rs.GetMetaData();
+            int columnCount = metaData.GetColumnCount();
 
-                // Tambah kolom ke DataTable
+            while (rs.Next())
+            {
+                var row = new Dictionary<string, object>();
                 for (int i = 1; i <= columnCount; i++)
                 {
-                    dataTable.Columns.Add(metaData.GetColumnName(i), typeof(object));
+                    row[metaData.GetColumnName(i)] = rs.GetObject(i);
                 }
-
-                // Isi DataTable dengan data dari ResultSet
-                while (rs.Next())
-                {
-                    var row = dataTable.NewRow();
-                    for (int i = 1; i <= columnCount; i++)
-                    {
-                        row[i - 1] = rs.GetObject(i);
-                    }
-                    dataTable.Rows.Add(row);
-                }
+                result.Add(row);
             }
-            finally
-            {
-                // Pastikan semua objek JDBC di-dispose
-                rs?.Close();
-                stmt?.Close();
-                conn?.Close();
-            }
-        });
+        }
+        finally
+        {
+            rs?.Close();
+            stmt?.Close();
+            conn?.Close();
+        }
+    });
 
-        return dataTable;
-    }
+    return result;
+}
+
 }
