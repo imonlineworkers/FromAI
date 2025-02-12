@@ -1,0 +1,50 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
+using Java.Sql;
+using AS400Web.Infrastructure.Persistence;
+
+namespace AS400Web.Infrastructure.Repositories
+{
+    public abstract class BaseRepository<T>
+    {
+        protected readonly AS400DbContext _dbContext;
+
+        public BaseRepository(AS400DbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
+
+        protected async Task<List<T>> QueryAsync(string sql, Action<PreparedStatement> parameterize, Func<IDataReader, T> map)
+        {
+            var result = new List<T>();
+
+            using (var connection = _dbContext.CreateConnection())
+            using (var command = (PreparedStatement)connection.PrepareStatement(sql))
+            {
+                parameterize?.Invoke(command);
+
+                using (var reader = (IDataReader)await command.ExecuteQueryAsync())
+                {
+                    while (reader.Read())
+                    {
+                        result.Add(map(reader));
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        protected async Task<int> ExecuteAsync(string sql, Action<PreparedStatement> parameterize)
+        {
+            using (var connection = _dbContext.CreateConnection())
+            using (var command = (PreparedStatement)connection.PrepareStatement(sql))
+            {
+                parameterize?.Invoke(command);
+                return await command.ExecuteUpdateAsync();
+            }
+        }
+    }
+}
