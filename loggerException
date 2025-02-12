@@ -1,0 +1,45 @@
+// Infrastructure/Logging/ExceptionLogger.cs
+using System;
+using System.IO;
+
+public class ExceptionLogger : IExceptionLogger
+{
+    private readonly string _logFilePath;
+
+    public ExceptionLogger()
+    {
+        // Tentukan path untuk folder Logs di dalam folder proyek
+        var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+
+        // Membuat folder Logs jika belum ada
+        if (!Directory.Exists(logDirectory))
+        {
+            Directory.CreateDirectory(logDirectory);
+        }
+
+        // Tentukan path lengkap untuk file log
+        _logFilePath = Path.Combine(logDirectory, "exception_log.txt");
+    }
+
+    public void Log(Exception exception)
+    {
+        try
+        {
+            // Menulis log ke file
+            using (var writer = new StreamWriter(_logFilePath, true)) // `true` untuk append ke file
+            {
+                writer.WriteLine("------------");
+                writer.WriteLine($"Date: {DateTime.Now}");
+                writer.WriteLine($"Message: {exception.Message}");
+                writer.WriteLine($"StackTrace: {exception.StackTrace}");
+                writer.WriteLine("------------");
+                writer.WriteLine();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Jika logging gagal, log error ke konsol atau log lain
+            Console.WriteLine("Logging failed: " + ex.Message);
+        }
+    }
+}
