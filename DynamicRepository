@@ -1,0 +1,57 @@
+using System;
+using System.Data;
+using System.Threading.Tasks;
+using Java.Sql;
+
+public class DynamicRepository
+{
+    private readonly AS400ConnectionFactory _connectionFactory;
+
+    public DynamicRepository(AS400ConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory;
+    }
+
+    public async Task<DataTable> ExecuteQueryAsync(string query, List<object> parameters)
+    {
+        var dataTable = new DataTable();
+
+        await Task.Run(() =>
+        {
+            using (var conn = _connectionFactory.GetConnection())
+            using (var stmt = conn.PrepareStatement(query))
+            {
+                // Bind parameters ke query
+                for (int i = 0; i < parameters.Count; i++)
+                {
+                    stmt.SetObject(i + 1, parameters[i]); // Index di JDBC mulai dari 1
+                }
+
+                using (var rs = stmt.ExecuteQuery())
+                {
+                    var metaData = rs.GetMetaData();
+                    int columnCount = metaData.GetColumnCount();
+
+                    // Tambah kolom ke DataTable
+                    for (int i = 1; i <= columnCount; i++)
+                    {
+                        dataTable.Columns.Add(metaData.GetColumnName(i), typeof(object));
+                    }
+
+                    // Isi DataTable dengan data dari ResultSet
+                    while (rs.Next())
+                    {
+                        var row = dataTable.NewRow();
+                        for (int i = 1; i <= columnCount; i++)
+                        {
+                            row[i - 1] = rs.GetObject(i);
+                        }
+                        dataTable.Rows.Add(row);
+                    }
+                }
+            }
+        });
+
+        return dataTable;
+    }
+}
