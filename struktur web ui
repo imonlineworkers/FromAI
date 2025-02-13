@@ -1,0 +1,28 @@
+├── src
+│   ├── WebUI (ASP.NET Core MVC)
+│   │   ├── Controllers
+│   │   │   ├── AuthController.cs
+│   │   ├── Views
+│   │   │   ├── Auth
+│   │   │   │   ├── Login.cshtml
+│   │   ├── Pages (kalau Blazor/Razor Pages)
+│   │   ├── wwwroot
+│   │   ├── Services (API client)
+│   │   │   ├── AuthService.cs
+│   │   ├── Models
+│   │   │   ├── LoginRequest.cs
+│   │   │   ├── LoginResponse.cs
+│   │   ├── Program.cs
+│   ├── Application (Business Logic)
+│   │   ├── Interfaces
+│   │   │   ├── IAuthService.cs
+│   │   ├── DTOs
+│   │   ├── Services
+│   ├── Infrastructure (API client, logging, dll)
+│   │   ├── ApiClients
+│   │   │   ├── AuthApiClient.cs
+│   │   ├── Logging
+│   ├── Domain (Entity core)
+│   │   ├── Entities
+│   │   ├── Enums
+├── tests (Unit/Integration tests)")}]}
