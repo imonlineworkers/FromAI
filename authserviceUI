@@ -1,0 +1,43 @@
+using System.Net.Http;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Text.Json;
+using WebUI.Models;
+
+public class AuthService : IAuthService
+{
+    private readonly HttpClient _httpClient;
+
+    public AuthService(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+
+    public async Task<string?> LoginAsync(LoginRequest request)
+    {
+        var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+
+        var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+            {
+                return errors == SslPolicyErrors.None || cert?.Subject.Contains("trusted-domain.com") == true;
+            }
+        };
+
+        using var secureClient = new HttpClient(handler);
+        secureClient.BaseAddress = new Uri("https://api.example.com");
+
+        var response = await secureClient.PostAsync("/auth/login", content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var json = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<LoginResponse>(json);
+            return result?.Token;
+        }
+
+        return null;
+    }
+}
