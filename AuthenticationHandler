@@ -1,0 +1,34 @@
+public class AuthenticationHandler : DelegatingHandler
+{
+    private readonly TokenValidationParameters _tokenValidationParameters;
+
+    public AuthenticationHandler(TokenValidationParameters tokenValidationParameters)
+    {
+        _tokenValidationParameters = tokenValidationParameters;
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var authHeader = request.Headers.Authorization;
+
+        if (authHeader != null && authHeader.Scheme == "Bearer")
+        {
+            var handler = new JwtSecurityTokenHandler();
+            try
+            {
+                var principal = handler.ValidateToken(authHeader.Parameter, _tokenValidationParameters, out _);
+                Thread.CurrentPrincipal = principal;
+                if (HttpContext.Current != null)
+                {
+                    HttpContext.Current.User = principal;
+                }
+            }
+            catch (SecurityTokenException)
+            {
+                return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+            }
+        }
+
+        return await base.SendAsync(request, cancellationToken);
+    }
+}
