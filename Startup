@@ -1,0 +1,48 @@
+using Microsoft.Owin;
+using Microsoft.Owin.Security.Jwt;
+using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.Cookies;
+using Owin;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using System.Configuration;
+
+[assembly: OwinStartup(typeof(YourNamespace.Startup))]
+namespace YourNamespace
+{
+    public class Startup
+    {
+        public void Configuration(IAppBuilder app)
+        {
+            var secretKey = Encoding.UTF8.GetBytes(ConfigurationManager.AppSettings["JwtSecret"]);
+            var issuer = ConfigurationManager.AppSettings["JwtIssuer"];
+            var audience = ConfigurationManager.AppSettings["JwtAudience"];
+
+            // Aktifkan Cookie Authentication jika dibutuhkan
+            app.UseCookieAuthentication(new CookieAuthenticationOptions
+            {
+                AuthenticationType = "Cookies",
+                LoginPath = new PathString("/Auth/Login")
+            });
+
+            // Konfigurasi JWT Bearer Authentication
+            app.UseJwtBearerAuthentication(new JwtBearerAuthenticationOptions
+            {
+                TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = issuer,
+
+                    ValidateAudience = true,
+                    ValidAudience = audience,
+
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero,
+
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(secretKey)
+                }
+            });
+        }
+    }
+}
