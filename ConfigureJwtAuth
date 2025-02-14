@@ -1,0 +1,34 @@
+protected void Application_Start()
+{
+    GlobalConfiguration.Configure(WebApiConfig.Register);
+    ConfigureJwtAuth();
+}
+
+private void ConfigureJwtAuth()
+{
+    var config = GlobalConfiguration.Configuration;
+
+    config.SuppressDefaultHostAuthentication();
+    config.Filters.Add(new HostAuthenticationFilter("Bearer"));
+    config.Filters.Add(new AuthorizeAttribute());
+
+    var secretKey = ConfigurationManager.AppSettings["JwtSecret"];
+    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+
+    var tokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = ConfigurationManager.AppSettings["JwtIssuer"],
+
+        ValidateAudience = true,
+        ValidAudience = ConfigurationManager.AppSettings["JwtAudience"],
+
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = key,
+
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+
+    config.MessageHandlers.Add(new AuthenticationHandler(tokenValidationParameters));
+}
