@@ -1,0 +1,8 @@
+protected void Application_BeginRequest(object sender, EventArgs e)
+{
+    HttpContext.Current.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+    HttpContext.Current.Response.Headers.Add("X-Frame-Options", "DENY");
+    HttpContext.Current.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+    HttpContext.Current.Response.Headers.Add("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    HttpContext.Current.Response.Headers.Add("Referrer-Policy", "strict-origin");
+}
