@@ -1,47 +1,54 @@
-// Data Models for Persistence Layer
+// Infrastructure/Persistence/Models/UserModel.cs
 namespace Infrastructure.Persistence.Models {
-
     public class UserModel {
-        public int user_id { get; set; }
-        public string username { get; set; }
-        public string password_hash { get; set; }
-        public string full_name { get; set; }
-        public string email { get; set; }
-        public string department { get; set; }
-        public bool is_active { get; set; }
-        public DateTime? created_date { get; set; }
-        public DateTime? updated_date { get; set; }
+        public int UserId { get; set; }
+        public string Username { get; set; }
+        public string PasswordHash { get; set; }
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public string Department { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public DateTime? UpdatedDate { get; set; }
     }
+}
 
+// Infrastructure/Persistence/Models/MenuModel.cs
+namespace Infrastructure.Persistence.Models {
     public class MenuModel {
-        public int menu_id { get; set; }
-        public string menu_name { get; set; }
-        public string menu_url { get; set; }
-        public int? parent_id { get; set; }
-        public string icon { get; set; }
-        public int display_order { get; set; }
-        public DateTime? created_date { get; set; }
-        public DateTime? updated_date { get; set; }
+        public int MenuId { get; set; }
+        public string MenuName { get; set; }
+        public string MenuUrl { get; set; }
+        public int? ParentId { get; set; }
+        public string Icon { get; set; }
+        public int DisplayOrder { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public DateTime? UpdatedDate { get; set; }
     }
+}
 
+// Infrastructure/Persistence/Models/AccessModel.cs
+namespace Infrastructure.Persistence.Models {
     public class AccessModel {
-        public int access_id { get; set; }
-        public int user_id { get; set; }
-        public int menu_id { get; set; }
-        public bool can_view { get; set; }
-        public bool can_edit { get; set; }
-        public bool can_delete { get; set; }
-        public DateTime? created_date { get; set; }
-        public DateTime? updated_date { get; set; }
+        public int AccessId { get; set; }
+        public int UserId { get; set; }
+        public int MenuId { get; set; }
+        public bool CanView { get; set; }
+        public bool CanEdit { get; set; }
+        public bool CanDelete { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public DateTime? UpdatedDate { get; set; }
     }
+}
 
+// Infrastructure/Persistence/Models/ReportModel.cs
+namespace Infrastructure.Persistence.Models {
     public class ReportModel {
-        public int report_id { get; set; }
-        public string report_name { get; set; }
-        public string department { get; set; }
-        public string sql_query { get; set; }
-        public DateTime? created_date { get; set; }
-        public DateTime? updated_date { get; set; }
+        public int ReportId { get; set; }
+        public string ReportName { get; set; }
+        public string Department { get; set; }
+        public string SqlQuery { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public DateTime? UpdatedDate { get; set; }
     }
-
 }
