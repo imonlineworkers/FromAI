@@ -1,57 +1,47 @@
--- Tabel Users
-CREATE TABLE users (
-    id INT NOT NULL PRIMARY KEY,
-    username VARCHAR(100) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    full_name VARCHAR(150) NOT NULL,
-    email VARCHAR(150) UNIQUE,
-    department VARCHAR(100),
-    is_active SMALLINT DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+-- Updated Database Schema with GUID as Primary Key
+
+CREATE TABLE Users (
+    UserId CHAR(36) PRIMARY KEY, -- GUID
+    Username VARCHAR(100) NOT NULL,
+    PasswordHash VARCHAR(255) NOT NULL,
+    FullName VARCHAR(255),
+    Email VARCHAR(255),
+    Department VARCHAR(100),
+    IsActive SMALLINT DEFAULT 1, -- 1 for TRUE, 0 for FALSE
+    CreatedDate DATE,
+    UpdatedDate DATE
 );
 
--- Tabel Menus
-CREATE TABLE menus (
-    id INT NOT NULL PRIMARY KEY,
-    menu_name VARCHAR(100) NOT NULL,
-    menu_url VARCHAR(255) NOT NULL,
-    parent_id INT,
-    icon VARCHAR(100),
-    display_order INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_parent_menu FOREIGN KEY (parent_id) REFERENCES menus(id) ON DELETE SET NULL
+CREATE TABLE Menus (
+    MenuId CHAR(36) PRIMARY KEY, -- GUID
+    MenuName VARCHAR(255) NOT NULL,
+    MenuUrl VARCHAR(255),
+    ParentId CHAR(36),
+    Icon VARCHAR(255),
+    DisplayOrder INT,
+    CreatedDate DATE,
+    UpdatedDate DATE,
+    FOREIGN KEY (ParentId) REFERENCES Menus(MenuId)
 );
 
--- Tabel Access
-CREATE TABLE access (
-    id INT NOT NULL PRIMARY KEY,
-    user_id INT,
-    menu_id INT,
-    can_view SMALLINT DEFAULT 0,
-    can_edit SMALLINT DEFAULT 0,
-    can_delete SMALLINT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_access_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_access_menu FOREIGN KEY (menu_id) REFERENCES menus(id) ON DELETE CASCADE
+CREATE TABLE Accesses (
+    AccessId CHAR(36) PRIMARY KEY, -- GUID
+    UserId CHAR(36),
+    MenuId CHAR(36),
+    CanView SMALLINT DEFAULT 0, -- 1 for TRUE, 0 for FALSE
+    CanEdit SMALLINT DEFAULT 0,
+    CanDelete SMALLINT DEFAULT 0,
+    CreatedDate DATE,
+    UpdatedDate DATE,
+    FOREIGN KEY (UserId) REFERENCES Users(UserId),
+    FOREIGN KEY (MenuId) REFERENCES Menus(MenuId)
 );
 
--- Tabel Reports
-CREATE TABLE reports (
-    id INT NOT NULL PRIMARY KEY,
-    report_name VARCHAR(255) NOT NULL,
-    department VARCHAR(100) NOT NULL,
-    sql_query TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+CREATE TABLE Reports (
+    ReportId CHAR(36) PRIMARY KEY, -- GUID
+    ReportName VARCHAR(255) NOT NULL,
+    Department VARCHAR(100),
+    SqlQuery TEXT,
+    CreatedDate DATE,
+    UpdatedDate DATE
 );
-
--- Index untuk optimasi
-CREATE INDEX idx_users_department ON users(department);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_menus_name ON menus(menu_name);
-CREATE INDEX idx_reports_name ON reports(report_name);
-CREATE INDEX idx_access_user_id ON access(user_id);
-CREATE INDEX idx_access_menu_id ON access(menu_id);
