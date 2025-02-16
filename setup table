@@ -1,0 +1,54 @@
+-- Tabel Users
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    email VARCHAR(150) UNIQUE,
+    department VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabel Menus
+CREATE TABLE menus (
+    id SERIAL PRIMARY KEY,
+    menu_name VARCHAR(100) NOT NULL,
+    menu_url VARCHAR(255) NOT NULL,
+    parent_id INT REFERENCES menus(id) ON DELETE SET NULL,
+    icon VARCHAR(100),
+    display_order INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabel Access
+CREATE TABLE access (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    menu_id INT REFERENCES menus(id) ON DELETE CASCADE,
+    can_view BOOLEAN DEFAULT FALSE,
+    can_edit BOOLEAN DEFAULT FALSE,
+    can_delete BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabel Reports
+CREATE TABLE reports (
+    id SERIAL PRIMARY KEY,
+    report_name VARCHAR(255) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    sql_query TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index untuk optimasi
+CREATE INDEX idx_users_department ON users(department);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_menus_name ON menus(menu_name);
+CREATE INDEX idx_reports_name ON reports(report_name);
+CREATE INDEX idx_access_user_id ON access(user_id);
+CREATE INDEX idx_access_menu_id ON access(menu_id);
