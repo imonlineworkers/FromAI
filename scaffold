@@ -1,0 +1,1 @@
+dotnet ef dbcontext scaffold "Server=.;Database=NamaDBLo;Trusted_Connection=True;" Microsoft.EntityFrameworkCore.SqlServer -o Infrastructure/Data/Entities -f --context-dir Infrastructure/Data
