@@ -1,0 +1,28 @@
+using System.Net;
+using System.Net.Http;
+using System.Web.Http.ExceptionHandling;
+using System.Web.Http.Results;
+using Domain.Common;
+
+namespace Infrastructure.Exceptions
+{
+    public class GlobalExceptionHandler : ExceptionHandler
+    {
+        public override void Handle(ExceptionHandlerContext context)
+        {
+            var exception = context.Exception as Domain.Common.Exceptions.AppException;
+            var statusCode = exception?.StatusCode ?? (int)HttpStatusCode.InternalServerError;
+
+            var response = new BaseResponse<object>
+            {
+                IsSuccess = false,
+                Message = exception?.Message ?? "Terjadi kesalahan pada server.",
+                InnerMessage = exception?.InnerException?.Message,
+                StatusCode = statusCode,
+                Data = null
+            };
+
+            context.Result = new ResponseMessageResult(context.Request.CreateResponse((HttpStatusCode)statusCode, response));
+        }
+    }
+}
