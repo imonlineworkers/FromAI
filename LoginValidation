@@ -1,0 +1,76 @@
+// Core/DTOs/LoginRequest.cs
+namespace Core.DTOs;
+
+public class LoginRequest
+{
+    public string Username { get; set; }
+    public string Password { get; set; }
+}
+
+// Infrastructure/Data/AuthenticationRepository.cs
+using System.Data.Odbc;
+using Microsoft.Extensions.Configuration;
+
+namespace Infrastructure.Data;
+
+public class AuthenticationRepository
+{
+    private readonly IConfiguration _configuration;
+
+    public AuthenticationRepository(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    public bool ValidateUser(string username, string password)
+    {
+        var connectionString = $"{_configuration["AS400:ConnectionString"]};UID={username};PWD={password}";
+
+        try
+        {
+            using var connection = new OdbcConnection(connectionString);
+            connection.Open();
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+}
+
+// API/Controllers/AuthController.cs
+using Core.DTOs;
+using Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc;
+
+namespace API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly AuthenticationRepository _authRepository;
+
+    public AuthController(AuthenticationRepository authRepository)
+    {
+        _authRepository = authRepository;
+    }
+
+    [HttpPost("login")]
+    public IActionResult Login([FromBody] LoginRequest loginRequest)
+    {
+        if (_authRepository.ValidateUser(loginRequest.Username, loginRequest.Password))
+        {
+            return Ok("Login successful");
+        }
+        return Unauthorized("Invalid credentials");
+    }
+}
+
+// appsettings.json
+{
+  "AS400": {
+    "ConnectionString": "DSN=AS400;SYSTEM=my-as400-server;" // Tambahkan konfigurasi sesuai
+  }
+}
