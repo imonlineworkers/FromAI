@@ -1,0 +1,43 @@
+@using AS400WebInterface.Application.DTOs
+@model LoginRequestDto
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AS400 Web Login</title>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet" />
+    <link href="~/css/login-styles.css" rel="stylesheet" />
+</head>
+<body>
+    <header>
+        <img src="~/assets/logo-axa-mandiri.png">
+    </header>
+    <div class="wrapper">
+        <div class="form-wrapper">
+            <div class="title">
+                <h2>RLS Web Interface</h2>
+            </div>
+            <form asp-controller="Auth" asp-action="Login" method="post">
+                <div class="input-box">
+                    <input type="text" asp-for="Username" required />
+                    <span>Username</span>
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="input-box">
+                    <input type="password" asp-for="Password" required />
+                    <span>Password</span>
+                    <i class="fas fa-lock"></i>
+                </div>
+                <button type="submit">Sign in</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
