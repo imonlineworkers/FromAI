@@ -1,1 +1,6 @@
-  ERROR [HY000] [IBM][System i Access ODBC Driver][DB2 for i5/OS]SQL5016 - Qualified object name ODBCTEST not valid
+System.Data.Odbc.OdbcException (0x80131937): ERROR [HY000] [IBM][System i Access ODBC Driver][DB2 for i5/OS]SQL5016 - Qualified object name ODBCCL not valid.
+   at System.Data.Odbc.OdbcConnection.HandleError(OdbcHandle hrHandle, SQLRETURN retcode)
+   at System.Data.Odbc.OdbcCommand.ExecuteReaderObject(CommandBehavior behavior, String method, Boolean needReader, Object[] methodArguments, SQL_API odbcApiMethod)
+   at System.Data.Odbc.OdbcCommand.ExecuteReaderObject(CommandBehavior behavior, String method, Boolean needReader)
+   at System.Data.Odbc.OdbcCommand.ExecuteNonQuery()
+   at System.Data.Common.DbCommand.ExecuteNonQueryAsync(CancellationToken cancellationToken)
