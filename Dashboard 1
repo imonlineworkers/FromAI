@@ -1,27 +1,45 @@
 @page
 @model DashboardModel
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "Insurance Dashboard";
 }
 
-<h2 class="mb-4">Dashboard</h2>
+<h2 class="mb-4">Insurance Dashboard</h2>
 
 <div class="row">
-    <!-- Statistik -->
-    <div class="col-md-4">
+    <!-- Statistik Utama -->
+    <div class="col-md-3">
         <div class="card text-white bg-primary mb-3 shadow-lg">
-            <div class="card-header">Total Users</div>
+            <div class="card-header">Total Policies</div>
             <div class="card-body text-center">
-                <h5 class="card-title display-4">1234</h5>
+                <h5 class="card-title display-4">1000</h5>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card text-white bg-success mb-3 shadow-lg">
-            <div class="card-header">Active Sessions</div>
+            <div class="card-header">Active Claims</div>
             <div class="card-body text-center">
-                <h5 class="card-title display-4">567</h5>
+                <h5 class="card-title display-4">250</h5>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3 shadow-lg">
+            <div class="card-header">Pending Approvals</div>
+            <div class="card-body text-center">
+                <h5 class="card-title display-4">45</h5>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3 shadow-lg">
+            <div class="card-header">Fraud Alerts</div>
+            <div class="card-body text-center">
+                <h5 class="card-title display-4">12</h5>
             </div>
         </div>
     </div>
@@ -31,9 +49,17 @@
 <div class="row">
     <div class="col-md-6">
         <div class="card shadow-lg">
-            <div class="card-header">User Activity</div>
+            <div class="card-header">Claims by Month</div>
             <div class="card-body">
-                <canvas id="userChart" style="height: 250px;"></canvas>
+                <canvas id="claimsChart" style="height: 250px;"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-lg">
+            <div class="card-header">Fraud Cases by Type</div>
+            <div class="card-body">
+                <canvas id="fraudChart" style="height: 250px;"></canvas>
             </div>
         </div>
     </div>
@@ -43,26 +69,39 @@
 <div class="row mt-4">
     <div class="col-md-12">
         <div class="card shadow-lg">
-            <div class="card-header">User List</div>
+            <div class="card-header">Recent Claims</div>
             <div class="card-body">
                 <table class="table table-hover table-bordered">
                     <thead class="thead-dark">
                         <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
+                            <th>Claim ID</th>
+                            <th>Policy Holder</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Submitted Date</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>1</td>
+                            <td>CLM001</td>
                             <td>John Doe</td>
-                            <td>john.doe@example.com</td>
+                            <td>$5000</td>
+                            <td>Approved</td>
+                            <td>2025-02-15</td>
                         </tr>
                         <tr>
-                            <td>2</td>
+                            <td>CLM002</td>
                             <td>Jane Smith</td>
-                            <td>jane.smith@example.com</td>
+                            <td>$1200</td>
+                            <td>Pending</td>
+                            <td>2025-02-17</td>
+                        </tr>
+                        <tr>
+                            <td>CLM003</td>
+                            <td>Michael Brown</td>
+                            <td>$3000</td>
+                            <td>Rejected</td>
+                            <td>2025-02-18</td>
                         </tr>
                     </tbody>
                 </table>
@@ -74,17 +113,17 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        var ctx = document.getElementById('userChart').getContext('2d');
-        var userChart = new Chart(ctx, {
-            type: 'bar',
+        var claimsCtx = document.getElementById('claimsChart').getContext('2d');
+        var claimsChart = new Chart(claimsCtx, {
+            type: 'line',
             data: {
-                labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
                 datasets: [{
-                    label: 'Users Per Month',
-                    data: [50, 60, 70, 80, 90, 100],
+                    label: 'Claims Filed',
+                    data: [50, 80, 65, 90, 120, 100],
                     backgroundColor: 'rgba(54, 162, 235, 0.5)',
                     borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
+                    borderWidth: 2
                 }]
             },
             options: {
@@ -92,6 +131,21 @@
                 scales: {
                     y: { beginAtZero: true }
                 }
+            }
+        });
+
+        var fraudCtx = document.getElementById('fraudChart').getContext('2d');
+        var fraudChart = new Chart(fraudCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Identity Theft', 'False Claims', 'Duplicate Claims', 'Other'],
+                datasets: [{
+                    data: [5, 3, 2, 2],
+                    backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0'],
+                }]
+            },
+            options: {
+                responsive: true
             }
         });
     </script>
