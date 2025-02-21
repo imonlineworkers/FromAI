@@ -1,0 +1,30 @@
+using AS400WebInterface.Application.DTOs;
+using AS400WebInterface.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AS400WebInterface.Web.Controllers
+{
+    public class AuthController(IAuthService authService) : Controller
+    {
+        private readonly IAuthService _authService = authService;
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Index()
+        {
+            return View();
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            bool isSuccess = await _authService.LoginAsync(request.Username, request.Password, cancellationToken);
+            if (!isSuccess) return Unauthorized("Invalid Credentials");
+
+            return RedirectToAction("Index", "Dashboard");
+        }
+    }
+}
