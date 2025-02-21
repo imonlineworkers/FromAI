@@ -1,0 +1,98 @@
+@page
+@model DashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<h2 class="mb-4">Dashboard</h2>
+
+<div class="row">
+    <!-- Statistik -->
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3 shadow-lg">
+            <div class="card-header">Total Users</div>
+            <div class="card-body text-center">
+                <h5 class="card-title display-4">1234</h5>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3 shadow-lg">
+            <div class="card-header">Active Sessions</div>
+            <div class="card-body text-center">
+                <h5 class="card-title display-4">567</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Placeholder -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-lg">
+            <div class="card-header">User Activity</div>
+            <div class="card-body">
+                <canvas id="userChart" style="height: 250px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabel Data Placeholder -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card shadow-lg">
+            <div class="card-header">User List</div>
+            <div class="card-body">
+                <table class="table table-hover table-bordered">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>John Doe</td>
+                            <td>john.doe@example.com</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Jane Smith</td>
+                            <td>jane.smith@example.com</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        var ctx = document.getElementById('userChart').getContext('2d');
+        var userChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                datasets: [{
+                    label: 'Users Per Month',
+                    data: [50, 60, 70, 80, 90, 100],
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    </script>
+}
