@@ -1,0 +1,39 @@
+@model AS400WebInterface.Application.DTOs.CallProgramResponseDto
+
+<div class="form-container">
+    <div class="input-title">
+        Call Local Program
+    </div>
+    <form asp-controller="CallProgram" asp-action="CallProgram" method="post">
+        <div class="form-row">
+            <div class="input-data">
+                <input type="text" asp-for="ProgramName" required>
+                <div class="underline"></div>
+                <label>Program Name</label>
+            </div>
+            <div class="input-data">
+                <input type="text" asp-for="LibraryName" required>
+                <div class="underline"></div>
+                <label for="">Library Name</label>
+            </div>
+        </div>
+
+        <div class="form-row">
+            @for (int i = 0; i < (Model.Parameters?.Count() ?? 0); i++)
+            {
+                <div class="input-data">
+                    <input type="text" required asp-for="Parameters[i]">
+                    <div class="underline"></div>
+                    <label>Parameters[i]</label>
+                </div>
+            }
+
+        </div>
+        <div class="form-row submit-btn">
+            <div class="input-data">
+                <div class="inner"></div>
+                <input type="submit" value="Run Program">
+            </div>
+        </div>
+    </form>
+</div>
