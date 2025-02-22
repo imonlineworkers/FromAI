@@ -1,0 +1,23 @@
+using AS400WebInterface.Application.DTOs;
+using AS400WebInterface.Application.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AS400WebInterface.Web.Controllers
+{
+    public class CallProgramController(ICallProgramService callProgram) : Controller
+    {
+        private readonly ICallProgramService _callProgram = callProgram;
+
+        public IActionResult Index()
+        {
+            return View(new CallProgramResponseDto());
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CallProgram(CallProgramRequestDto request, CancellationToken cancellationToken)
+        {
+            var data = await _callProgram.CallProgramAsync(request, cancellationToken);
+            return Ok(data);
+        }
+    }
+}
