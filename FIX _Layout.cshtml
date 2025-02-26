@@ -376,3 +376,27 @@ hamburger.addEventListener("click", function(){
     toggler.classList.toggle("bx-menu-alt-right");
     toggler.classList.toggle("bx-menu-alt-left");
 });
+
+<div class="container mt-5">
+        <div class="card shadow-sm p-4 rounded-4">
+            <h2 class="text-center mb-4">Modern Input Form</h2>
+            <form>
+                <div class="mb-3">
+                    <label for="programName" class="form-label">Program Name</label>
+                    <input type="text" class="form-control" id="programName" placeholder="Enter program name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="parameterCount" class="form-label">Parameter Count</label>
+                    <input type="number" class="form-control" id="parameterCount" placeholder="Enter parameter count" required>
+                </div>
+                <div class="mb-3">
+                    <label for="parameters" class="form-label">Parameters</label>
+                    <textarea class="form-control" id="parameters" rows="3" placeholder="Enter parameters (comma-separated)"></textarea>
+                </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg rounded-pill">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
