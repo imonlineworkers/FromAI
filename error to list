@@ -1,0 +1,4 @@
+public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken)
+{
+    return await _context.Set<T>().ToListAsync(cancellationToken);
+}
