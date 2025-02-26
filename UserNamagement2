@@ -1,0 +1,170 @@
+// Models
+public class AS400UserModel
+{
+    public string Username { get; set; }
+    public string FullName { get; set; }
+    public string Role { get; set; }
+    public string Status { get; set; }
+}
+
+// Common Result class
+public class Result
+{
+    public bool Success { get; }
+    public string Message { get; }
+
+    protected Result(bool success, string message)
+    {
+        Success = success;
+        Message = message;
+    }
+
+    public static Result SuccessResult() => new Result(true, string.Empty);
+    public static Result FailureResult(string message) => new Result(false, message);
+}
+
+public class Result<T> : Result
+{
+    public T? Data { get; }
+
+    private Result(bool success, T? data, string message) : base(success, message)
+    {
+        Data = data;
+    }
+
+    public static Result<T> Success(T data) => new Result<T>(true, data, string.Empty);
+    public static Result<T> Failure(string message) => new Result<T>(false, default, message);
+}
+
+// Commands
+public record CreateAS400UserCommand(AS400UserModel User) : IRequest<Result<Guid>>;
+public record UpdateAS400UserCommand(Guid Id, AS400UserModel User) : IRequest<Result>;
+public record DeleteAS400UserCommand(Guid Id) : IRequest<Result>;
+
+// Queries
+public record GetAllAS400UsersQuery() : IRequest<Result<IEnumerable<AS400User>>>;
+public record GetAS400UserByIdQuery(Guid Id) : IRequest<Result<AS400User>>;
+
+// Handlers
+public class AS400UserHandler :
+    IRequestHandler<CreateAS400UserCommand, Result<Guid>>,
+    IRequestHandler<UpdateAS400UserCommand, Result>,
+    IRequestHandler<DeleteAS400UserCommand, Result>,
+    IRequestHandler<GetAllAS400UsersQuery, Result<IEnumerable<AS400User>>>,
+    IRequestHandler<GetAS400UserByIdQuery, Result<AS400User>>
+{
+    private readonly AppDbContext _context;
+
+    public AS400UserHandler(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Result<Guid>> Handle(CreateAS400UserCommand request, CancellationToken cancellationToken)
+    {
+        var user = new AS400User
+        {
+            Id = Guid.NewGuid(),
+            Username = request.User.Username,
+            FullName = request.User.FullName,
+            Role = request.User.Role,
+            Status = request.User.Status,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.AS400Users.Add(user);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result<Guid>.Success(user.Id);
+    }
+
+    public async Task<Result> Handle(UpdateAS400UserCommand request, CancellationToken cancellationToken)
+    {
+        var user = await _context.AS400Users.FindAsync(new object[] { request.Id }, cancellationToken);
+        if (user == null) return Result.FailureResult("User not found");
+
+        user.Username = request.User.Username;
+        user.FullName = request.User.FullName;
+        user.Role = request.User.Role;
+        user.Status = request.User.Status;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result.SuccessResult();
+    }
+
+    public async Task<Result> Handle(DeleteAS400UserCommand request, CancellationToken cancellationToken)
+    {
+        var user = await _context.AS400Users.FindAsync(new object[] { request.Id }, cancellationToken);
+        if (user == null) return Result.FailureResult("User not found");
+
+        _context.AS400Users.Remove(user);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result.SuccessResult();
+    }
+
+    public async Task<Result<IEnumerable<AS400User>>> Handle(GetAllAS400UsersQuery request, CancellationToken cancellationToken)
+    {
+        var users = await _context.AS400Users.ToListAsync(cancellationToken);
+        return Result<IEnumerable<AS400User>>.Success(users);
+    }
+
+    public async Task<Result<AS400User>> Handle(GetAS400UserByIdQuery request, CancellationToken cancellationToken)
+    {
+        var user = await _context.AS400Users.FindAsync(new object[] { request.Id }, cancellationToken);
+        if (user == null) return Result<AS400User>.Failure("User not found");
+        return Result<AS400User>.Success(user);
+    }
+}
+
+// Controller
+[ApiController]
+[Route("api/[controller]")]
+public class AS400UsersController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public AS400UsersController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create(AS400UserModel model)
+    {
+        var result = await _mediator.Send(new CreateAS400UserCommand(model));
+        if (!result.Success) return BadRequest(result.Message);
+        return CreatedAtAction(nameof(GetById), new { id = result.Data }, null);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(Guid id, AS400UserModel model)
+    {
+        var result = await _mediator.Send(new UpdateAS400UserCommand(id, model));
+        if (!result.Success) return NotFound(result.Message);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var result = await _mediator.Send(new DeleteAS400UserCommand(id));
+        if (!result.Success) return NotFound(result.Message);
+        return NoContent();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _mediator.Send(new GetAllAS400UsersQuery());
+        return Ok(result.Data);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var result = await _mediator.Send(new GetAS400UserByIdQuery(id));
+        if (!result.Success) return NotFound(result.Message);
+        return Ok(result.Data);
+    }
+}
