@@ -1,0 +1,153 @@
+// Models
+public class AS400UserModel
+{
+    public string Username { get; set; }
+    public string FullName { get; set; }
+    public string Role { get; set; }
+    public string Status { get; set; }
+}
+
+// Common Result class
+public class Result
+{
+    public bool Success { get; }
+    public string Message { get; }
+
+    protected Result(bool success, string message)
+    {
+        Success = success;
+        Message = message;
+    }
+
+    public static Result SuccessResult() => new Result(true, string.Empty);
+    public static Result FailureResult(string message) => new Result(false, message);
+}
+
+public class Result<T> : Result
+{
+    public T? Data { get; }
+
+    private Result(bool success, T? data, string message) : base(success, message)
+    {
+        Data = data;
+    }
+
+    public static Result<T> Success(T data) => new Result<T>(true, data, string.Empty);
+    public static Result<T> Failure(string message) => new Result<T>(false, default, message);
+}
+
+// Commands
+public record CreateAS400UserCommand(AS400UserModel User) : IRequest<Result<Guid>>;
+public record UpdateAS400UserCommand(Guid Id, AS400UserModel User) : IRequest<Result>;
+public record DeleteAS400UserCommand(Guid Id) : IRequest<Result>;
+
+// Queries
+public record GetAllAS400UsersQuery() : IRequest<Result<IEnumerable<AS400User>>>;
+public record GetAS400UserByIdQuery(Guid Id) : IRequest<Result<AS400User>>;
+
+// Handlers
+public class CreateAS400UserHandler : IRequestHandler<CreateAS400UserCommand, Result<Guid>>
+{
+    private readonly AppDbContext _context;
+
+    public CreateAS400UserHandler(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Result<Guid>> Handle(CreateAS400UserCommand request, CancellationToken cancellationToken)
+    {
+        var user = new AS400User
+        {
+            Id = Guid.NewGuid(),
+            Username = request.User.Username,
+            FullName = request.User.FullName,
+            Role = request.User.Role,
+            Status = request.User.Status,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.AS400Users.Add(user);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result<Guid>.Success(user.Id);
+    }
+}
+
+public class UpdateAS400UserHandler : IRequestHandler<UpdateAS400UserCommand, Result>
+{
+    private readonly AppDbContext _context;
+
+    public UpdateAS400UserHandler(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Result> Handle(UpdateAS400UserCommand request, CancellationToken cancellationToken)
+    {
+        var user = await _context.AS400Users.FindAsync(new object[] { request.Id }, cancellationToken);
+        if (user == null) return Result.FailureResult("User not found");
+
+        user.Username = request.User.Username;
+        user.FullName = request.User.FullName;
+        user.Role = request.User.Role;
+        user.Status = request.User.Status;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result.SuccessResult();
+    }
+}
+
+public class DeleteAS400UserHandler : IRequestHandler<DeleteAS400UserCommand, Result>
+{
+    private readonly AppDbContext _context;
+
+    public DeleteAS400UserHandler(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Result> Handle(DeleteAS400UserCommand request, CancellationToken cancellationToken)
+    {
+        var user = await _context.AS400Users.FindAsync(new object[] { request.Id }, cancellationToken);
+        if (user == null) return Result.FailureResult("User not found");
+
+        _context.AS400Users.Remove(user);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result.SuccessResult();
+    }
+}
+
+public class GetAllAS400UsersHandler : IRequestHandler<GetAllAS400UsersQuery, Result<IEnumerable<AS400User>>>
+{
+    private readonly AppDbContext _context;
+
+    public GetAllAS400UsersHandler(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Result<IEnumerable<AS400User>>> Handle(GetAllAS400UsersQuery request, CancellationToken cancellationToken)
+    {
+        var users = await _context.AS400Users.ToListAsync(cancellationToken);
+        return Result<IEnumerable<AS400User>>.Success(users);
+    }
+}
+
+public class GetAS400UserByIdHandler : IRequestHandler<GetAS400UserByIdQuery, Result<AS400User>>
+{
+    private readonly AppDbContext _context;
+
+    public GetAS400UserByIdHandler(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Result<AS400User>> Handle(GetAS400UserByIdQuery request, CancellationToken cancellationToken)
+    {
+        var user = await _context.AS400Users.FindAsync(new object[] { request.Id }, cancellationToken);
+        if (user == null) return Result<AS400User>.Failure("User not found");
+        return Result<AS400User>.Success(user);
+    }
+}
