@@ -1,0 +1,39 @@
+@model PagedResult<UserDto>
+
+@{
+    ViewData["Title"] = "User List";
+}
+
+<h2 class="text-center mb-4">User List</h2>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th class="col-6">Username</th>
+                <th class="col-6">Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model.Items)
+            {
+                <tr>
+                    <td class="col-6">@user.Username</td>
+                    <td class="col-6">@user.Email</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+<nav>
+    <ul class="pagination justify-content-center">
+        @for (var i = 1; i <= (int)Math.Ceiling((double)Model.TotalCount / Model.PageSize); i++)
+        {
+            <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                <a class="page-link" asp-page="./Index" asp-route-page="@i">@i</a>
+            </li>
+        }
+    </ul>
+</nav>
