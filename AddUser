@@ -1,0 +1,124 @@
+@page
+@model AddUserModel
+
+@{
+    ViewData["Title"] = "Add User";
+}
+
+<h2 class="text-center mb-4">Add User</h2>
+
+<form method="post" class="needs-validation" novalidate>
+    <div class="mb-3">
+        <label for="UserName" class="form-label">Username</label>
+        <input type="text" id="UserName" name="UserName" class="form-control" required>
+        <div class="invalid-feedback">
+            Please enter a username.
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="FullName" class="form-label">Full Name</label>
+        <input type="text" id="FullName" name="FullName" class="form-control" required>
+        <div class="invalid-feedback">
+            Please enter a full name.
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="Department" class="form-label">Department</label>
+        <select id="Department" name="Department" class="form-select">
+            <option value="">Select Department</option>
+            <option value="IT">IT</option>
+            <option value="HR">HR</option>
+            <option value="Finance">Finance</option>
+            <option value="Marketing">Marketing</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="Role" class="form-label">Role</label>
+        <select id="Role" name="Role" class="form-select">
+            <option value="">Select Role</option>
+            <option value="Admin">Admin</option>
+            <option value="User">User</option>
+            <option value="Manager">Manager</option>
+            <option value="Guest">Guest</option>
+        </select>
+    </div>
+
+    <div class="mb-3 form-check">
+        <input type="checkbox" id="IsActive" name="IsActive" class="form-check-input">
+        <label for="IsActive" class="form-check-label">Is Active</label>
+    </div>
+
+    <div class="d-flex justify-content-end">
+        <a asp-page="./Index" class="btn btn-secondary me-2">Cancel</a>
+        <button type="submit" class="btn btn-primary">Add User</button>
+    </div>
+</form>
+
+
+using Microsoft.AspNetCore.Mvc;
+using AutoMapper;
+using MediatR;
+using System.Threading.Tasks;
+using AS400IntegrationLayer.Application.Users.Commands.CreateUser;
+using AS400IntegrationLayer.WebAPI.Models;
+
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
+{
+    private readonly IMediator _mediator;
+    private readonly IMapper _mapper;
+
+    public UsersController(IMediator mediator, IMapper mapper)
+    {
+        _mediator = mediator;
+        _mapper = mapper;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateUser([FromBody] UserViewModel model)
+    {
+        if (model == null)
+        {
+            return BadRequest("Invalid user data.");
+        }
+
+        var command = _mapper.Map<CreateUserCommand>(model);
+        var result = await _mediator.Send(command);
+
+        if (result)
+        {
+            return Ok("User created successfully.");
+        }
+
+        return BadRequest("Failed to create user.");
+    }
+}
+
+
+using MediatR;
+
+public class CreateUserCommand : IRequest<bool>
+{
+    public string? UserName { get; set; }
+    public string? FullName { get; set; }
+    public string? Department { get; set; }
+    public string? Role { get; set; }
+    public bool IsActive { get; set; }
+}
+
+
+using AutoMapper;
+using AS400IntegrationLayer.WebAPI.Models;
+using AS400IntegrationLayer.Application.Users.Commands.CreateUser;
+
+public class UserProfile : Profile
+{
+    public UserProfile()
+    {
+        CreateMap<UserViewModel, CreateUserCommand>();
+    }
+}
