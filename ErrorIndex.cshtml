@@ -1,1 +1,43 @@
 InvalidOperationException: The relative page path './Index' can only be used while executing a Razor Page. Specify a root relative path with a leading '/' to generate a URL outside of a Razor Page. If you are using LinkGenerator then you must provide the current HttpContext to use relative pages.
+
+
+@using AS400WebInterface.Application.Models
+@model List<UserViewModel>
+
+<div class="container">
+    <div class="card shadow-sm p-2 ">
+        <h2 class="text-center mb-4">User List</h2>
+        <button class="btn btn-primary mb-3 col-2" type="button" data-bs-toggle="collapse" data-bs-target="#addUser"
+                aria-expanded="false" aria-controls="addUser">
+            Add User
+        </button>
+        <div id="addUser" class="collapse">
+            @await Html.PartialAsync("_AddUser", new UserViewModel())
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="col-6">Username</th>
+                        <th class="col-6">Full Name</th>
+                        <th class="col-6">Department</th>
+                        <th class="col-6">Role</th>
+                        <th class="col-6">Is Active</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td class="col-6">@user.UserName</td>
+                            <td class="col-6">@user.FullName</td>
+                            <td class="col-6">@user.Department</td>
+                            <td class="col-6">@user.Role</td>
+                            <td class="col-6">@user.IsActive</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
