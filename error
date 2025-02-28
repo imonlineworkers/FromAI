@@ -17,3 +17,21 @@ public async Task<Result<string?>> Handle(CreateUserCommand request, Cancellatio
     await _baseRepository.AddAsync(user, cancellationToken);
     return Result<string?>.Ok(user.UserName, "User ID Successfully Registered");
 }
+
+
+using AS400IntegrationLayer.Application.DTOs.ViewModels;
+using AS400IntegrationLayer.Domain.Common;
+using MediatR;
+
+namespace AS400IntegrationLayer.Application.Features.Users.Commands
+{
+    public record CreateUserCommand(UserViewModel User) : IRequest<Result<string?>>;
+}
+
+[HttpPost("add-user")]
+public async Task<IActionResult> Create([FromBody] UserViewModel model)
+{
+    var result = await _mediator.Send(new CreateUserCommand(model));
+    if (!result.Success) return BadRequest(result.Message);
+    return CreatedAtAction(nameof(GetById), new { username = result.Data });
+}
