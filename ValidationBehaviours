@@ -1,35 +1,132 @@
-// Folder: Application/Behaviors
+/* Struktur Folder
 
+AS400IntegrationLayer/
+│
+├── Application/
+│   ├── DTOs/
+│   │   └── ViewModels/
+│   │       └── UserViewModel.cs
+│   ├── Features/
+│   │   └── Users/
+│   │       └── Commands/
+│   │           └── CreateUserCommand.cs
+│   ├── Behaviours/
+│   │   └── ValidationBehaviour.cs
+│
+├── WebAPI/
+│   └── Controllers/
+│       └── UserController.cs
+│
+└── Program.cs
+*/
+
+// UserViewModel.cs
+namespace AS400IntegrationLayer.Application.DTOs.ViewModels;
+
+public class UserViewModel
+{
+    public Guid UserId { get; set; }
+    public string? UserName { get; set; }
+    public string? FullName { get; set; }
+    public string? Department { get; set; }
+    public string? Role { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime? CreatedDate { get; set; }
+    public DateTime? UpdatedDate { get; set; }
+}
+
+// CreateUserCommand.cs
+using AS400IntegrationLayer.Application.DTOs.ViewModels;
+using AS400IntegrationLayer.Domain.Common;
 using FluentValidation;
 using MediatR;
-using AS400IntegrationLayer.Domain.Common;
 
-namespace AS400IntegrationLayer.Application.Behaviors;
+public record CreateUserCommand(UserViewModel User) : IRequest<Result<string?>>
+{
+    public class Validator : AbstractValidator<CreateUserCommand>
+    {
+        public Validator()
+        {
+            RuleFor(x => x.User.UserName).NotEmpty().WithMessage("Username is required.");
+            RuleFor(x => x.User.FullName).NotEmpty().WithMessage("Full Name is required.");
+            RuleFor(x => x.User.Department).NotEmpty().WithMessage("Department is required.");
+            RuleFor(x => x.User.Role).NotEmpty().WithMessage("Role is required.");
+        }
+    }
+}
 
-public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse>
+// ValidationBehaviour.cs
+using FluentValidation;
+using MediatR;
+
+public class ValidationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
 {
     private readonly IEnumerable<IValidator<TRequest>> _validators;
 
-    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
+    public ValidationBehaviour(IEnumerable<IValidator<TRequest>> validators)
     {
         _validators = validators;
     }
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
-        if (_validators.Any())
-        {
-            var context = new ValidationContext<TRequest>(request);
-            var validationResults = await Task.WhenAll(_validators.Select(v => v.ValidateAsync(context, cancellationToken)));
-            var failures = validationResults.SelectMany(r => r.Errors).Where(f => f != null).ToList();
+        var context = new ValidationContext<TRequest>(request);
+        var failures = _validators
+            .Select(v => v.Validate(context))
+            .SelectMany(result => result.Errors)
+            .Where(f => f != null)
+            .ToList();
 
-            if (failures.Count != 0)
-            {
-                var errors = failures.Select(e => e.ErrorMessage).ToArray();
-                return (TResponse)Result<string?>.Fail("Validation failed", errors);
-            }
+        if (failures.Any())
+        {
+            throw new ValidationException(failures);
         }
 
         return await next();
     }
 }
+
+// UserController.cs
+using AS400IntegrationLayer.Application.DTOs.ViewModels;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/[controller]")]
+public class UserController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public UserController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpPost("add-user")]
+    public async Task<IActionResult> Create([FromBody] UserViewModel model)
+    {
+        var result = await _mediator.Send(new CreateUserCommand(model));
+        if (!result.Success) return BadRequest(result.Message);
+        return CreatedAtAction(nameof(Create), new { username = result.Data }, result);
+    }
+}
+
+// Program.cs
+using FluentValidation.AspNetCore;
+using AS400IntegrationLayer.Application.Features.Users.Commands;
+using MediatR;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<CreateUserCommand>());
+
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateUserCommand).Assembly));
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
+
+var app = builder.Build();
+
+app.MapControllers();
+
+app.Run();
