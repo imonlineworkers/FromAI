@@ -1,0 +1,112 @@
+/* Struktur Folder
+
+AS400IntegrationLayer/
+│
+├── Application/
+│   ├── DTOs/
+│   │   └── ViewModels/
+│   │       └── UserViewModel.cs
+│   ├── Features/
+│   │   └── Users/
+│   │       └── Commands/
+│   │           └── CreateUserCommand.cs
+│   └── Validators/
+│       └── UserViewModelValidator.cs
+│
+├── WebAPI/
+│   └── Controllers/
+│       └── UserController.cs
+│
+└── Program.cs
+*/
+
+// UserViewModel.cs
+namespace AS400IntegrationLayer.Application.DTOs.ViewModels;
+
+public class UserViewModel
+{
+    public Guid UserId { get; set; }
+    public string? UserName { get; set; }
+    public string? FullName { get; set; }
+    public string? Department { get; set; }
+    public string? Role { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime? CreatedDate { get; set; }
+    public DateTime? UpdatedDate { get; set; }
+}
+
+// CreateUserCommand.cs
+using AS400IntegrationLayer.Application.DTOs.ViewModels;
+using AS400IntegrationLayer.Domain.Common;
+using FluentValidation;
+using MediatR;
+
+public record CreateUserCommand(UserViewModel User) : IRequest<Result<string?>>
+{
+    public class Validator : AbstractValidator<CreateUserCommand>
+    {
+        public Validator()
+        {
+            RuleFor(x => x.User.UserName).NotEmpty().WithMessage("Username is required.");
+            RuleFor(x => x.User.FullName).NotEmpty().WithMessage("Full Name is required.");
+            RuleFor(x => x.User.Department).NotEmpty().WithMessage("Department is required.");
+            RuleFor(x => x.User.Role).NotEmpty().WithMessage("Role is required.");
+        }
+    }
+}
+
+// UserViewModelValidator.cs
+using AS400IntegrationLayer.Application.DTOs.ViewModels;
+using FluentValidation;
+
+public class UserViewModelValidator : AbstractValidator<UserViewModel>
+{
+    public UserViewModelValidator()
+    {
+        RuleFor(x => x.UserName).NotEmpty().WithMessage("Username is required.");
+        RuleFor(x => x.FullName).NotEmpty().WithMessage("Full Name is required.");
+        RuleFor(x => x.Department).NotEmpty().WithMessage("Department is required.");
+        RuleFor(x => x.Role).NotEmpty().WithMessage("Role is required.");
+    }
+}
+
+// UserController.cs
+using AS400IntegrationLayer.Application.DTOs.ViewModels;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/[controller]")]
+public class UserController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public UserController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpPost("add-user")]
+    public async Task<IActionResult> Create([FromBody] UserViewModel model)
+    {
+        var result = await _mediator.Send(new CreateUserCommand(model));
+        if (!result.Success) return BadRequest(result.Message);
+        return CreatedAtAction(nameof(Create), new { username = result.Data }, result);
+    }
+}
+
+// Program.cs
+using FluentValidation.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<CreateUserCommand>());
+
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateUserCommand).Assembly));
+
+var app = builder.Build();
+
+app.MapControllers();
+
+app.Run();
