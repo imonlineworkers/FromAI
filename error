@@ -8,3 +8,12 @@ public async Task<T?> GetAsync<T>(string endpoint, CancellationToken cancellatio
 
     return JsonConvert.DeserializeObject<T>(json);
 }
+
+
+public async Task<Result<string?>> Handle(CreateUserCommand request, CancellationToken cancellationToken)
+{
+    var user = _mapper.Map<User>(request);
+
+    await _baseRepository.AddAsync(user, cancellationToken);
+    return Result<string?>.Ok(user.UserName, "User ID Successfully Registered");
+}
