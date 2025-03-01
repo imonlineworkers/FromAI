@@ -1,0 +1,70 @@
+@using AS400WebInterface.Application.ViewModels
+@model List<UserViewModel>
+
+<div class="container">
+    <div class="card shadow-sm p-2 ">
+        <h4 class="text-center mb-4 text-uppercase border-bottom py-3">User List</h4>
+        <button class="btn btn-primary mb-3 col-2 d-flex align-items-center justify-content-center" type="button" data-bs-toggle="collapse" data-bs-target="#userFormCollapse"
+                aria-expanded="false" aria-controls="addUser">
+            <i class="bx bxs-add-to-queue me-2"></i> Add User
+        </button>
+        <div id="userFormCollapse" class="collapse">
+            <partial name="_UserForm" model="new UserViewModel()" />
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Department</th>
+                        <th>Role</th>
+                        <th>Is Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td>@user.UserName</td>
+                            <td>@user.FullName</td>
+                            <td>@user.Department</td>
+                            <td>@user.Role</td>
+                            <td>@(user.IsActive ? "Active" : "Inactive")</td>
+                            <td class="align-content-center">
+                                <form asp-action="EditUser" method="get" asp-route-userId="@user.UserId">
+                                    <button type="submit" class="btn btn-sm btn-warning" data-bs-toggle="collapse" data-bs-target="#userFormCollapse">Edit</button>
+                                </form>
+                                <form asp-action="DeleteUser" method="post" style="display:inline;">
+                                    <input type="hidden" name="userId" value="@user.UserId" />
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this user?');">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+[HttpPost]
+public async Task<IActionResult> EditUser(UserViewModel model, CancellationToken cancellationToken)
+{
+    if (!ModelState.IsValid)
+    {
+        return PartialView("_UpdateUser", model);
+    }
+
+    var response = await _user.UpdateUserAsync(model, cancellationToken);
+    return View(response);
+}
+[HttpGet]
+public async Task<IActionResult> EditUser(Guid userId, CancellationToken cancellationToken)
+{
+    var user = await _user.GetUserByIdAsync(userId, cancellationToken);
+    return PartialView("_UserForm", user);
+}
