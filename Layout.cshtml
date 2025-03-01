@@ -3,45 +3,103 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - AS400WebInterface.Web</title>
+    <title>@ViewData["Title"] - AS400WebInterface</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/AS400WebInterface.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">AS400WebInterface.Web</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <div class="wrapper">
+        <aside id="sidebar" class="expand">
+            <div class="d-flex justify-content-between p-4 py-3 b-w">
+                <div class="sidebar-logo">
+                    <a href="#"><img src="~/assets/logo_axa_mandiri.png" alt="Axa Mandiri" /></a>
+                    <button class="toggle-button border-0" type="button">
+                        <i id="icon" class="bx bx-menu-alt-right"></i>
+                    </button>
+                </div>
+            </div>
+            <ul class="sidebar-nav">
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link">
+                        <i class="bx bxs-dashboard"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link">
+                        <i class="bx bxs-network-chart"></i>
+                        <span>Run Program</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="@Url.Action("Index","User")" class="sidebar-link">
+                        <i class="bx bxs-user"></i>
+                        <span>User Management</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="@Url.Action("Logout","Auth")" class="sidebar-link">
+                    <i class="bx bx-log-out"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+        <div class="main">
+            <nav class="navbar navbar-expand px-4 py-3">
+                <form action="#" class="d-none d-sm-inline-block">
+                    <div class="input-group input-group-navbar">
+                        <input type="text"
+                               class="form-control border-0 rounded-0 pe-0"
+                               placeholder="Search ..."
+                               aria-label="Search" />
+                        <button class="btn border-0 rounded-0" type="button">
+                            <i class="bx bx-search"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="navbar-collapse collapse">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="navbar-item dropdown">
+                            <a href="#" data-bs-toggle="dropdown" class="nav-icon pe-md-0">
+                                <img src="~/assets/logo-axa.png" class="avatar img-fluid" alt="" />
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end rounded-0 border-0 shadow mt-3">
+                                <a href="#" class="dropdown-item">
+                                    <i class="bx bx-data"></i>
+                                    <span>Edit Profile</span>
+                                </a>
+                                <a href="#" class="dropdown-item">
+                                    <i class="bx bx-data"></i>
+                                    <span>Logout</span>
+                                </a>
+                            </div>
                         </li>
                     </ul>
                 </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - AS400WebInterface.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            </nav>
+            <main class="content px-3 py-4">
+                <div class="container-fluid">
+                    <div class="mb-3">
+                        @RenderBody()
+                    </div>
+                </div>
+            </main>
+            <footer class="footer">
+                <div class="container-fluid">
+                    <div class="row text-body-secondary">
+                        <div class="col-6 text-start">
+                            <a href="" class="text-body-secondary">
+                                <span>&copy; 2025 Axa Mandiri Web RLS Interface</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
-    </footer>
+    </div>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
