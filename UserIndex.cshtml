@@ -61,3 +61,55 @@
 </div>
 
 <script src="~/js/User.js"></script>
+
+@using AS400WebInterface.Application.ViewModels
+@model UserViewModel
+
+<form method="post" asp-action="SaveUser" asp-controller="User">
+    <input type="hidden" asp-for="UserId" />
+    <div class="mb-3 col-md-4">
+        <div class="form-floating">
+            <input type="text" asp-for="UserName" class="form-control" placeholder=" " required>
+            <label asp-for="UserName" class="form-label">Username</label>
+            <div class="invalid-feedback">
+                Please enter a username.
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3 col-md-4">
+        <div class="form-floating">
+            <input type="text" asp-for="FullName" class="form-control" placeholder=" " required>
+            <label asp-for="FullName" class="form-label">Full Name</label>
+            <div class="invalid-feedback">
+                Please enter a full name.
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3 col-md-4">
+        <select asp-for="Department" class="form-select">
+            <option value="">Select Department</option>
+            <option value="POS">POS</option>
+            <option value="Claim">Claim</option>
+            <option value="Finance">Finance</option>
+            <option value="CompBen">Compensation Benefit</option>
+        </select>
+    </div>
+
+    <div class="mb-3 col-md-4">
+        <select asp-for="Role" class="form-select">
+            <option value="">Select Role</option>
+            <option value="Admin">Admin</option>
+            <option value="User">User</option>
+            <option value="Manager">Manager</option>
+            <option value="Guest">Guest</option>
+        </select>
+    </div>
+
+    <div class="d-flex justify-content-end mb-3">
+        <a asp-controller="User" asp-action="Index" class="btn btn-secondary me-2">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save User</button>
+    </div>
+</form>
+
