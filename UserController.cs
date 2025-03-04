@@ -48,3 +48,53 @@ namespace AS400IntegrationLayer.API.Controllers
         }
     }
 }
+
+using AS400WebInterface.Application.Interfaces;
+using AS400WebInterface.Application.ViewModels;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AS400WebInterface.Web.Controllers
+{
+    public class UserController(IUser user) : Controller
+    {
+        private readonly IUser _user = user;
+
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            var response = await _user.GetUserAsync(cancellationToken: new CancellationToken());
+            return View(response);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddUser([FromBody] UserViewModel model, CancellationToken cancellationToken)
+        {
+            var response = await _user.AddUserAsync(model, cancellationToken);
+            return Json(response);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateUser([FromBody] UserViewModel model, CancellationToken cancellationToken)
+        {
+            var response = await _user.UpdateUserAsync(model, cancellationToken);
+            return Json(response);
+        }
+
+        [HttpGet("User/EditUser/{userId}")]
+        public async Task<IActionResult> EditUser(Guid userId, CancellationToken cancellationToken)
+        {
+
+            var user = await _user.GetUserByIdAsync(userId, cancellationToken);
+            return PartialView("_UserForm", user);
+
+        }
+        [HttpPost]
+        public async Task<IActionResult> DeleteUser([FromBody] Guid userId, CancellationToken cancellationToken)
+        {
+            var response = await _user.DeleteUserAsync(userId, cancellationToken);
+            return Json(response);
+        }
+
+    }
+}
+
