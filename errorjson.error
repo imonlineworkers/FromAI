@@ -1,0 +1,1 @@
+Avoid creating a new 'JsonSerializerOptions' instance for every serialization operation. Cache and reuse instances instead.
