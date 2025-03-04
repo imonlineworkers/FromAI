@@ -1,1 +1,1 @@
-System.Text.Json.JsonException: 'The JSON value could not be converted to AS400WebInterface.Domain.Common.BaseResponse`1[System.Collections.Generic.List`1[System.Collections.Generic.List`1[AS400WebInterface.Domain.Entities.User]]]. Path: $ | LineNumber: 0 | BytePositionInLine: 1.'
+System.Text.Json.JsonException: 'The JSON value could not be converted to AS400WebInterface.Domain.Common.BaseResponse`1[System.Collections.Generic.List`1[AS400WebInterface.Domain.Entities.User]]. Path: $ | LineNumber: 0 | BytePositionInLine: 1.'
