@@ -11,18 +11,30 @@ namespace AS400IntegrationLayer.Infrastructure.Persistence.DbContexts
         public OdbcConnection CreateConnection()
         {
             var connectionString = $"Driver={_settings.Driver};" +
-                $"System={_settings.Server};" +
-                $"Uid={_settings.Username};" +
-                $"Pwd={_settings.Password}";
+                                   $"System={_settings.Server};" +
+                                   $"Uid={_settings.Username};" +
+                                   $"Pwd={_settings.Password};" +
+                                   $"Pooling=true;" +
+                                   $"Min Pool Size=5;" +
+                                   $"Max Pool Size=100;" +
+                                   $"Connection Timeout=30;";
 
-            var connection = new OdbcConnection(connectionString);
-            return connection;
+            return new OdbcConnection(connectionString);
         }
 
         public async Task<bool> Validate(string? username, string? password)
         {
-            var connectionString = $"Driver={_settings.Driver};System={_settings.Server};Uid={username};Pwd={password}";
-            var connection = new OdbcConnection(connectionString);
+            var connectionString = $"Driver={_settings.Driver};" +
+                                   $"System={_settings.Server};" +
+                                   $"Uid={username};" +
+                                   $"Pwd={password};" +
+                                   $"Pooling=true;" +
+                                   $"Min Pool Size=5;" +
+                                   $"Max Pool Size=100;" +
+                                   $"Connection Timeout=30;";
+
+            await using var connection = new OdbcConnection(connectionString);
+
             try
             {
                 await connection.OpenAsync();
@@ -31,10 +43,6 @@ namespace AS400IntegrationLayer.Infrastructure.Persistence.DbContexts
             catch (OdbcException oc)
             {
                 throw new ApiCustomException(oc.Message);
-            }
-            finally
-            {
-                await connection.CloseAsync();
             }
         }
 
