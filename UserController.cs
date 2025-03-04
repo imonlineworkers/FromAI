@@ -7,42 +7,44 @@ using Microsoft.AspNetCore.Mvc;
 namespace AS400IntegrationLayer.API.Controllers
 {
     [Route("api/users")]
+    [ApiController]
     public class UsersController(IMediator mediator) : ControllerBase
     {
         private readonly IMediator _mediator = mediator;
-        [HttpPost("add-user")]
+
+        [HttpPost]
         public async Task<IActionResult> Create([FromBody] UserViewModel model)
         {
             var result = await _mediator.Send(new CreateUserCommand(model));
-            return Ok(result);
+            return CreatedAtAction(nameof(GetById), new { userId = result.Data?.Id }, result);
         }
 
-        [HttpDelete("delete-user")]
-        public async Task<IActionResult> Delete([FromBody] Guid userId)
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> Delete(Guid userId)
         {
             var result = await _mediator.Send(new DeleteUserCommand(userId));
-            return Ok(result);
+            return result.IsSuccess ? NoContent() : NotFound(result);
         }
 
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetById(Guid userId)
         {
             var result = await _mediator.Send(new GetUserByIdQuery(userId));
-            return Ok(result);
+            return result.IsSuccess ? Ok(result) : NotFound(result);
         }
 
-        [HttpGet("get-users")]
+        [HttpGet]
         public async Task<IActionResult> GetUsers()
         {
             var result = await _mediator.Send(new GetUsersQuery());
             return Ok(result);
         }
 
-        [HttpPost("edit-user")]
-        public async Task<IActionResult> Update([FromBody] Guid userId, [FromBody] UserViewModel model)
+        [HttpPut("{userId}")]
+        public async Task<IActionResult> Update(Guid userId, [FromBody] UserViewModel model)
         {
             var result = await _mediator.Send(new UpdateUserCommand(userId, model));
-            return Ok(result);
+            return result.IsSuccess ? Ok(result) : NotFound(result);
         }
     }
 }
