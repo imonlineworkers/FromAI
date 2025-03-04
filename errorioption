@@ -1,1 +1,0 @@
-Argument 2: cannot convert from 'Microsoft.Extensions.Configuration.IConfigurationSection' to 'System.Action<AS400IntegrationLayer.Domain.Settings.AS400Settings>'
