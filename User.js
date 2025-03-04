@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const userData = {};
         formData.forEach((value, key) => userData[key] = value);
 
-        const isEdit = !!userData.UserId;
+        const isEdit = form.querySelector('input[name="IsEdit"]').value === 'true';
         const url = isEdit ? '/User/UpdateUser' : '/User/AddUser';
 
         fetch(url, {
@@ -19,19 +19,21 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                form.reset();
-                if (!isEdit) {
-                    bootstrap.Collapse.getOrCreateInstance(document.getElementById('addUserForm')).hide();
+            .then(response => response.json())
+            .then(data => {
+                if (data.isSuccess) {
+                    form.reset();
+                    if (!isEdit) {
+                        closeAddUserForm();
+                    } else if (currentOpenId) {
+                        closeEditUserForm(currentOpenId);
+                    }
+                    location.reload();
+                } else {
+                    alert('Failed to save user');
                 }
-                location.reload();
-            } else {
-                alert('Failed to save user');
-            }
-        })
-        .catch(error => console.error('Error:', error));
+            })
+            .catch(error => console.error('Error:', error));
     };
 
     // Edit User
@@ -41,21 +43,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const contentWrapper = document.getElementById(`content_${userId}`);
 
         if (currentOpenId === userId) {
-            contentWrapper.classList.remove('show');
-            setTimeout(() => {
-                bootstrap.Collapse.getOrCreateInstance(collapseRow).hide();
-            }, 300);
-            currentOpenId = null;
+            closeEditUserForm(userId);
             return;
         }
 
         if (currentOpenId) {
-            const prevContent = document.getElementById(`content_${currentOpenId}`);
-            const prevRow = document.getElementById(`row_${currentOpenId}`);
-            prevContent.classList.remove('show');
-            setTimeout(() => {
-                bootstrap.Collapse.getOrCreateInstance(prevRow).hide();
-            }, 300);
+            closeEditUserForm(currentOpenId);
         }
 
         try {
@@ -66,6 +59,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             formContent.innerHTML = await response.text();
+            const isEditInput = document.createElement('input');
+            isEditInput.type = 'hidden';
+            isEditInput.name = 'IsEdit';
+            isEditInput.value = 'true';
+            formContent.querySelector('form').appendChild(isEditInput);
+
             bootstrap.Collapse.getOrCreateInstance(collapseRow).show();
             setTimeout(() => {
                 contentWrapper.classList.add('show');
@@ -78,21 +77,42 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Delete User
     window.deleteUser = function (userId) {
+        console.log(userId);
         if (!confirm('Are you sure you want to delete this user?')) return;
 
         fetch(`/User/DeleteUser`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId })
+            body: JSON.stringify(userId)
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById(`row_${userId}`).remove();
-            } else {
-                alert('Failed to delete user');
-            }
-        })
-        .catch(error => console.error('Error deleting user:', error));
+            .then(response => response.json())
+            .then(data => {
+                if (data.isSuccess) {
+                    location.reload();
+                } else {
+                    alert('Failed to delete user');
+                }
+            })
+            .catch(error => console.error('Error deleting user:', error));
+    };
+
+    window.closeForm = function (isEdit, userId) {
+        console.log(userId);
+        if (isEdit === false) {
+            bootstrap.Collapse.getOrCreateInstance(document.getElementById('addUserForm')).hide();
+        } else {
+            closeEditUserForm(userId);
+        }
+    };
+
+    window.closeEditUserForm = function (userId) {
+        const collapseRow = document.getElementById(`row_${userId}`);
+        const contentWrapper = document.getElementById(`content_${userId}`);
+        contentWrapper.classList.remove('show');
+        setTimeout(() => {
+            bootstrap.Collapse.getOrCreateInstance(collapseRow).hide();
+        }, 300);
+        currentOpenId = null;
+
     };
 });
