@@ -112,3 +112,5 @@
      C                   EVAL      XCT   -= 1
      C                   ENDDO
      C                   ENDSR
+
+Length of varying length variable is out of range.
