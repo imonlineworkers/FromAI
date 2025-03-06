@@ -1,22 +1,23 @@
-ctl-opt dftactgrp(*no) actgrp(*new);
+     F* No files, just testing @ASSEMNT
 
-dcl-s @ASSEMNT char(9999);
-dcl-s actualLength int(10);
+     D @ASSEMNT        S           9999A
+     D actualLength    S              5I 0
+     D i               S              5I 0
+     D char            S              1A
 
-dcl-pi *n;
-  @ASSEMNT char(9999);
-end-pi;
+     C     *ENTRY        PLIST
+     C                   PARM                    @ASSEMNT          9999
 
-actualLength = 0;
+     C                   EVAL      actualLength = 0
 
-for i = 9999 downto 1;
-    if %subst(@ASSEMNT: i: 1) >= ' ' and %subst(@ASSEMNT: i: 1) <= 'z';
-       actualLength = i;
-       leave;
-    endif;
-endfor;
+     C                   FOR       i = 9999 DOWNTO 1
+     C                   EVAL      char = %SUBST(@ASSEMNT: i: 1)
+     C                   IF        char >= ' ' AND char <= 'z'
+     C                   EVAL      actualLength = i
+     C                   LEAVE
+     C                   ENDIF
+     C                   ENDFOR
 
-dsply ('Actual Length: ' + %char(actualLength));
+     C                   DSPLY     'Actual Length: ' + %CHAR(actualLength)
 
-*inlr = *on;
-return;
+     C                   EVAL      *INLR = *ON
