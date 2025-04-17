@@ -1,0 +1,21 @@
+@echo off
+REM ====== SETUP VARIABEL ======
+set ACS_PATH="C:\Program Files (x86)\IBM\Client Access\AcS\acslaunch_win-64.exe"
+set DTFX_FILE="C:\Data\Transfer\TransferData.dtfx"
+set OUTPUT_FOLDER=C:\Data\Output
+set OUTPUT_FILE=data.csv
+
+REM ====== TANGGAL FORMAT YYYY-MM-DD ======
+for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd"') do set TODAY=%%i
+
+REM ====== JALANKAN DTFX ======
+%ACS_PATH% /PLUGIN=dtfx /FILE=%DTFX_FILE%
+
+REM ====== TUNGGU SEBENTAR (opsional, kalau proses transfer butuh waktu) ======
+timeout /t 5 /nobreak >nul
+
+REM ====== RENAME FILE HASIL TRANSFER ======
+set RENAMED_FILE=data_%TODAY%.csv
+move /Y "%OUTPUT_FOLDER%\%OUTPUT_FILE%" "%OUTPUT_FOLDER%\%RENAMED_FILE%"
+
+echo Transfer selesai. File disimpan sebagai %RENAMED_FILE%
