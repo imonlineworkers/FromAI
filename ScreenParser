@@ -1,0 +1,65 @@
+public class ScreenParser
+{
+    private byte[] _buffer;
+    private Screen5250 _screen;
+
+    public ScreenParser(byte[] buffer)
+    {
+        _buffer = buffer;
+        _screen = new Screen5250();
+    }
+
+    public Screen5250 Parse()
+    {
+        int ptr = 0;
+        int row = 0, col = 0;
+
+        while (ptr < _buffer.Length)
+        {
+            byte b = _buffer[ptr++];
+
+            if (b == 0x11) // SBA (Set Buffer Address)
+            {
+                if (ptr + 1 >= _buffer.Length) break;
+                int addr = ((_buffer[ptr++] & 0x3F) << 6) | (_buffer[ptr++] & 0x3F);
+                row = addr / 80;
+                col = addr % 80;
+            }
+            else if (b == 0x1D) // SF (Start Field)
+            {
+                if (ptr >= _buffer.Length) break;
+                byte attr = _buffer[ptr++];
+                bool input = (attr & 0x20) == 0;
+                bool reverse = (attr & 0x01) != 0;
+
+                var ch = _screen.Buffer[row, col];
+                ch.IsFieldStart = true;
+                ch.IsInput = input;
+                ch.Reverse = reverse;
+            }
+            else if (b >= 0x40 && b <= 0xFE)
+            {
+                char ch = EbcdicToAscii(b);
+                _screen.SetChar(row, col, ch);
+                col++;
+                if (col >= 80) { col = 0; row++; }
+            }
+        }
+
+        return _screen;
+    }
+
+    private char EbcdicToAscii(byte b)
+    {
+        // Subset simple EBCDIC to ASCII mapping
+        string map = "                                !\"#$%&'()*+,-./0123456789:;<=>?"+
+                     "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"+
+                     "`abcdefghijklmnopqrstuvwxyz{|}~ "+
+                     "                                ";
+
+        if (b >= 0x40 && b < 0xC0)
+            return map[b - 0x40];
+        else
+            return '.';
+    }
+}
