@@ -1,0 +1,44 @@
+using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading;
+using WindowsInput;
+using WindowsInput.Native;
+
+class Program
+{
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+    static void Main()
+    {
+        // 1. Jalankan ACS dengan .hod
+        var process = new Process();
+        process.StartInfo.FileName = "java";
+        process.StartInfo.Arguments = "-jar \"C:\\Path\\to\\acslaunch_win-64.jar\" /plugin=5250 /profile=\"C:\\Path\\to\\Session.hod\"";
+        process.StartInfo.UseShellExecute = false;
+        process.Start();
+        Console.WriteLine("Launching ACS session...");
+        Thread.Sleep(5000); // Waktu buka session
+
+        // 2. Cari window 5250 ACS
+        IntPtr acsWnd = FindWindow(null, "IBM i Access Client Solutions"); // Atau ganti dengan nama window session lo
+        if (acsWnd != IntPtr.Zero)
+        {
+            SetForegroundWindow(acsWnd);
+            Thread.Sleep(1000); // Tunggu fokus
+        }
+
+        // 3. Simulasi login
+        var sim = new InputSimulator();
+        sim.Keyboard.TextEntry("MYUSER");
+        sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+        sim.Keyboard.TextEntry("MYPASSWORD");
+        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+
+        Console.WriteLine("Login simulated.");
+    }
+}
