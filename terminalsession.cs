@@ -48,7 +48,7 @@ namespace Auto5250net.Terminal
 
 private async Task HandleTelnetAsync(Stream stream)
     {
-        var buffer = new byte[2048];
+var buffer = new byte[2048];
         while (true)
         {
             int read = await stream.ReadAsync(buffer, 0, buffer.Length);
@@ -59,13 +59,46 @@ private async Task HandleTelnetAsync(Stream stream)
             {
                 if (buffer[i] == TelnetCommands.IAC)
                 {
+                    if (i + 1 >= read) break;
+
+                    byte next = buffer[i + 1];
+
+                    if (next == TelnetCommands.SB) // Subnegotiation
+                    {
+                        int sbStart = i + 2;
+                        int sbEnd = Array.IndexOf(buffer, TelnetCommands.SE, sbStart);
+                        if (sbEnd == -1) break; // incomplete, wait more
+
+                        byte option = buffer[sbStart];
+                        byte subCmd = buffer[sbStart + 1];
+
+                        if (option == TelnetCommands.TERMINAL_TYPE && subCmd == 1) // SEND
+                        {
+                            // Balas terminal type
+                            List<byte> response = new List<byte>
+                            {
+                                TelnetCommands.IAC, TelnetCommands.SB,
+                                TelnetCommands.TERMINAL_TYPE, 0 // IS
+                            };
+
+                            byte[] termType = Encoding.ASCII.GetBytes("IBM-3278-2-E");
+                            response.AddRange(termType);
+                            response.Add(TelnetCommands.IAC);
+                            response.Add(TelnetCommands.SE);
+
+                            await stream.WriteAsync(response.ToArray(), 0, response.Count);
+                        }
+
+                        i = sbEnd + 1;
+                        continue;
+                    }
+
                     if (i + 2 >= read) break;
 
                     byte command = buffer[i + 1];
                     byte option = buffer[i + 2];
 
                     byte responseCommand;
-
                     switch (command)
                     {
                         case TelnetCommands.DO:
@@ -99,12 +132,13 @@ private async Task HandleTelnetAsync(Stream stream)
                 }
                 else
                 {
-                    // Bukan Telnet Command, ini mungkin datastream 5250
-                    var hex = BitConverter.ToString(buffer, i, read - i);
+                    // Ini data layar 5250
+                    string hex = BitConverter.ToString(buffer, i, read - i);
                     OnRawDataReceived?.Invoke(hex);
                     Console.WriteLine("DATA >> " + hex);
-                    break; // stop loop dan read ulang
+                    break;
                 }
+
             }
         }
     }
