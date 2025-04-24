@@ -45,3 +45,67 @@ namespace Auto5250net.Terminal
         }
     }
 }
+
+private async Task HandleTelnetAsync(Stream stream)
+    {
+        var buffer = new byte[2048];
+        while (true)
+        {
+            int read = await stream.ReadAsync(buffer, 0, buffer.Length);
+            if (read <= 0) break;
+
+            int i = 0;
+            while (i < read)
+            {
+                if (buffer[i] == TelnetCommands.IAC)
+                {
+                    if (i + 2 >= read) break;
+
+                    byte command = buffer[i + 1];
+                    byte option = buffer[i + 2];
+
+                    byte responseCommand;
+
+                    switch (command)
+                    {
+                        case TelnetCommands.DO:
+                            if (option == TelnetCommands.BINARY || option == TelnetCommands.TERMINAL_TYPE)
+                                responseCommand = TelnetCommands.WILL;
+                            else
+                                responseCommand = TelnetCommands.WONT;
+                            break;
+
+                        case TelnetCommands.WILL:
+                            if (option == TelnetCommands.SUPPRESS_GO_AHEAD || option == TelnetCommands.BINARY)
+                                responseCommand = TelnetCommands.DO;
+                            else
+                                responseCommand = TelnetCommands.DONT;
+                            break;
+
+                        default:
+                            i += 3;
+                            continue;
+                    }
+
+                    byte[] response = new byte[]
+                    {
+                        TelnetCommands.IAC,
+                        responseCommand,
+                        option
+                    };
+
+                    await stream.WriteAsync(response, 0, response.Length);
+                    i += 3;
+                }
+                else
+                {
+                    // Bukan Telnet Command, ini mungkin datastream 5250
+                    var hex = BitConverter.ToString(buffer, i, read - i);
+                    OnRawDataReceived?.Invoke(hex);
+                    Console.WriteLine("DATA >> " + hex);
+                    break; // stop loop dan read ulang
+                }
+            }
+        }
+    }
+
