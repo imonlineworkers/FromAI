@@ -9,11 +9,8 @@ public class TerminalEmulator
 {
     private string _host;
     private int _port;
-    private TcpClient _tcpClient;
     private SslStream _sslStream;
-    private NetworkStream _networkStream;
-
-    public event Action<string> OnRawDataReceived;
+    private TelnetClient _telnetClient;
 
     public TerminalEmulator(string host, int port)
     {
@@ -25,17 +22,20 @@ public class TerminalEmulator
     {
         try
         {
-            _tcpClient = new TcpClient(_host, _port);
-            _networkStream = _tcpClient.GetStream();
-            
-            // Setup SSL Stream
-            _sslStream = new SslStream(_networkStream, false,
+            // Connect to the server using TCP
+            TcpClient tcpClient = new TcpClient(_host, _port);
+            NetworkStream networkStream = tcpClient.GetStream();
+
+            // Wrap network stream with SSL
+            _sslStream = new SslStream(networkStream, false,
                 new RemoteCertificateValidationCallback((sender, certificate, chain, sslPolicyErrors) => true));
             _sslStream.AuthenticateAsClient(_host);
 
-            Console.WriteLine("Connected to IBM i via SSL");
+            // Instantiate TelnetClient to interact via Telnet
+            _telnetClient = new TelnetClient(_host, _port);
 
-            // Start reading
+            Console.WriteLine("Connected to IBM i via SSL and Telnet.");
+
             StartReading();
         }
         catch (Exception ex)
@@ -56,7 +56,6 @@ public class TerminalEmulator
                 {
                     string hexData = BitConverter.ToString(buffer, 0, bytesRead);
                     Console.WriteLine("Received data: " + hexData);
-                    OnRawDataReceived?.Invoke(hexData);
                 }
             }
             catch (Exception ex)
