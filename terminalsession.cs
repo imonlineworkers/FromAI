@@ -48,7 +48,30 @@ namespace Auto5250net.Terminal
 
 private async Task HandleTelnetAsync(Stream stream)
     {
-var buffer = new byte[2048];
+using Auto5250net.Core;
+using System.Net.Security;
+using System.Text;
+using System.Collections.Generic;
+
+public class TerminalSession
+{
+    private readonly SslStream sslStream;
+
+    public event Action<string> OnRawDataReceived;
+
+    public TerminalSession(SslStream stream)
+    {
+        sslStream = stream;
+    }
+
+    public async Task StartReadingAsync()
+    {
+        await HandleTelnetAsync(sslStream);
+    }
+
+    private async Task HandleTelnetAsync(Stream stream)
+    {
+        var buffer = new byte[2048];
         while (true)
         {
             int read = await stream.ReadAsync(buffer, 0, buffer.Length);
@@ -61,60 +84,52 @@ var buffer = new byte[2048];
                 {
                     if (i + 1 >= read) break;
 
-                    byte next = buffer[i + 1];
+                    byte command = buffer[i + 1];
+                    byte option = buffer[i + 2];
 
-                    if (next == TelnetCommands.SB) // Subnegotiation
+                    if (command == TelnetCommands.SB) // Subnegotiation Start (SB)
                     {
                         int sbStart = i + 2;
-                        int sbEnd = Array.IndexOf(buffer, TelnetCommands.SE, sbStart);
+                        int sbEnd = Array.IndexOf(buffer, TelnetCommands.SE, sbStart); // Subnegotiation End (SE)
                         if (sbEnd == -1) break; // incomplete, wait more
 
-                        byte option = buffer[sbStart];
                         byte subCmd = buffer[sbStart + 1];
-
-                        if (option == TelnetCommands.TERMINAL_TYPE && subCmd == 1) // SEND
+                        if (option == TelnetCommands.TERMINAL_TYPE && subCmd == 1) // SEND Terminal Type request
                         {
-                            // Balas terminal type
+                            // Balas dengan informasi terminal type
                             List<byte> response = new List<byte>
                             {
                                 TelnetCommands.IAC, TelnetCommands.SB,
-                                TelnetCommands.TERMINAL_TYPE, 0 // IS
+                                TelnetCommands.TERMINAL_TYPE, 0 // IS Terminal Type
                             };
 
                             byte[] termType = Encoding.ASCII.GetBytes("IBM-3278-2-E");
-                            response.AddRange(termType);
+                            response.AddRange(termType); // Tambahkan terminal type ke response
+
                             response.Add(TelnetCommands.IAC);
                             response.Add(TelnetCommands.SE);
 
                             await stream.WriteAsync(response.ToArray(), 0, response.Count);
                         }
 
-                        i = sbEnd + 1;
+                        i = sbEnd + 1; // Skip past SE
                         continue;
                     }
 
-                    if (i + 2 >= read) break;
-
-                    byte command = buffer[i + 1];
-                    byte option = buffer[i + 2];
-
+                    // Handling perintah Telnet lainnya seperti DO, WILL, WONT, DONT
                     byte responseCommand;
-
-                    // Handling Telnet Commands DO/WILL/DO etc.
                     switch (command)
                     {
                         case TelnetCommands.DO:
-                            if (option == TelnetCommands.BINARY || option == TelnetCommands.TERMINAL_TYPE)
-                                responseCommand = TelnetCommands.WILL;
-                            else
-                                responseCommand = TelnetCommands.WONT;
+                            responseCommand = option == TelnetCommands.BINARY || option == TelnetCommands.TERMINAL_TYPE
+                                ? TelnetCommands.WILL
+                                : TelnetCommands.WONT;
                             break;
 
                         case TelnetCommands.WILL:
-                            if (option == TelnetCommands.SUPPRESS_GO_AHEAD || option == TelnetCommands.BINARY)
-                                responseCommand = TelnetCommands.DO;
-                            else
-                                responseCommand = TelnetCommands.DONT;
+                            responseCommand = option == TelnetCommands.SUPPRESS_GO_AHEAD || option == TelnetCommands.BINARY
+                                ? TelnetCommands.DO
+                                : TelnetCommands.DONT;
                             break;
 
                         default:
@@ -134,12 +149,17 @@ var buffer = new byte[2048];
                 }
                 else
                 {
-                    // Ini data layar 5250
+                    // Data 5250, ini untuk output layar
                     string hex = BitConverter.ToString(buffer, i, read - i);
                     OnRawDataReceived?.Invoke(hex);
                     Console.WriteLine("DATA >> " + hex);
                     break;
                 }
+            }
+        }
+    }
+}
+
 
 
             }
