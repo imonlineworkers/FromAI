@@ -1,0 +1,78 @@
+public class ScreenField
+    {
+        public int Row { get; set; }
+        public int Column { get; set; }
+        public string Value { get; set; }
+        public bool IsEditable { get; set; }
+
+        public ScreenField(int row, int column, string value, bool isEditable)
+        {
+            Row = row;
+            Column = column;
+            Value = value;
+            IsEditable = isEditable;
+        }
+    }
+
+
+public class DataStreamParser
+    {
+        public List<ScreenField> Parse(string hexStream)
+        {
+            var fields = new List<ScreenField>();
+
+            // Misal parsing sederhana berdasarkan karakter (ini perlu disesuaikan dengan format datastream IBM i)
+            for (int i = 0; i < hexStream.Length; i += 2)
+            {
+                string hexChar = hexStream.Substring(i, 2);
+                char c = (char)Convert.ToByte(hexChar, 16);
+
+                // Pencocokan sederhana untuk contoh (misal 'A' adalah field yang bisa diedit)
+                if (c == 'A')
+                {
+                    fields.Add(new ScreenField(i / 2, 0, "Editable Field", true));
+                }
+                else
+                {
+                    fields.Add(new ScreenField(i / 2, 0, c.ToString(), false));
+                }
+            }
+
+            return fields;
+        }
+    }
+
+try
+    {
+        // Inisialisasi session terminal
+        session = new TerminalSession();
+        session.OnRawDataReceived += (data) =>
+        {
+            // Parse raw hex data
+            var parser = new DataStreamParser();
+            var fields = parser.Parse(data);
+
+            // Render fields ke UI
+            RenderScreen(fields);
+        };
+
+        // Koneksi ke IBM i via SSL
+        await session.ConnectAsync("your-ibmi-host", 992);
+        AppendText("Connected to IBM i...\r\n");
+
+        // Mulai baca data dari server
+        _ = session.StartReadingAsync();
+    }
+    catch (Exception ex)
+    {
+        AppendText("Error: " + ex.Message + "\r\n");
+    }
+private void RenderScreen(List<ScreenField> fields)
+{
+    outputTextBox.Clear();
+    foreach (var field in fields)
+    {
+        // Misalnya, kita tampilkan field dan posisi dalam format string
+        outputTextBox.AppendText($"Row: {field.Row}, Column: {field.Column}, Value: {field.Value}, Editable: {field.IsEditable}\r\n");
+    }
+}
