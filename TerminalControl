@@ -1,0 +1,51 @@
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+public class TerminalControl : Control
+{
+    public Screen5250 Screen { get; set; }
+    public Font TermFont { get; set; } = new Font("Consolas", 10);
+
+    public TerminalControl()
+    {
+        this.DoubleBuffered = true;
+        this.ResizeRedraw = true;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        if (Screen == null) return;
+
+        var g = e.Graphics;
+        int charWidth = TextRenderer.MeasureText("W", TermFont).Width;
+        int charHeight = TextRenderer.MeasureText("W", TermFont).Height;
+
+        for (int r = 0; r < Screen5250.Rows; r++)
+        {
+            for (int c = 0; c < Screen5250.Cols; c++)
+            {
+                var ch = Screen.Buffer[r, c];
+                var x = c * charWidth;
+                var y = r * charHeight;
+
+                Color fg = Color.White;
+                Color bg = Color.Black;
+
+                if (ch.IsFieldStart)
+                {
+                    bg = ch.IsInput ? Color.DarkGreen : Color.DarkSlateGray;
+                    fg = Color.White;
+                }
+
+                using (var bgBrush = new SolidBrush(bg))
+                using (var fgBrush = new SolidBrush(fg))
+                {
+                    g.FillRectangle(bgBrush, x, y, charWidth, charHeight);
+                    g.DrawString(ch.Char.ToString(), TermFont, fgBrush, x, y);
+                }
+            }
+        }
+    }
+} 
