@@ -1,0 +1,43 @@
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+public class ScreenRenderer : Panel
+{
+    private Screen5250 _screen;
+    private Font _font = new Font("Consolas", 12, FontStyle.Regular);
+    private Brush _normalBrush = Brushes.LightGray;
+    private Brush _inputBrush = Brushes.White;
+    private Brush _textBrush = Brushes.Black;
+
+    public ScreenRenderer()
+    {
+        this.DoubleBuffered = true;
+        this.Size = new Size(80 * 9, 24 * 18); // Approx cell size
+    }
+
+    public void UpdateScreen(Screen5250 screen)
+    {
+        _screen = screen;
+        this.Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        if (_screen == null) return;
+
+        for (int row = 0; row < Screen5250.Rows; row++)
+        {
+            for (int col = 0; col < Screen5250.Cols; col++)
+            {
+                var ch = _screen.Buffer[row, col];
+                Rectangle cellRect = new Rectangle(col * 9, row * 18, 9, 18);
+
+                Brush bg = ch.IsInput ? _inputBrush : _normalBrush;
+                e.Graphics.FillRectangle(bg, cellRect);
+                e.Graphics.DrawString(ch.Char.ToString(), _font, _textBrush, cellRect.Location);
+            }
+        }
+    }
+}
