@@ -1,0 +1,88 @@
+namespace Auto5250net.Core
+{
+    public static class TelnetCommands
+    {
+        // Command bytes
+        public const byte IAC = 255; // Interpret As Command
+        public const byte DONT = 254;
+        public const byte DO = 253;
+        public const byte WONT = 252;
+        public const byte WILL = 251;
+        public const byte SB = 250;   // Subnegotiation Begin
+        public const byte SE = 240;   // Subnegotiation End
+
+        // Common options
+        public const byte BINARY = 0;
+        public const byte ECHO = 1;
+        public const byte SUPPRESS_GO_AHEAD = 3;
+        public const byte STATUS = 5;
+        public const byte TIMING_MARK = 6;
+        public const byte TERMINAL_TYPE = 24;
+        public const byte NAWS = 31; // Negotiate About Window Size
+        public const byte TERMINAL_SPEED = 32;
+        public const byte REMOTE_FLOW_CONTROL = 33;
+        public const byte LINEMODE = 34;
+        public const byte NEW_ENVIRON = 39;
+    }
+}
+
+
+TerminalSession.cs
+
+private async Task HandleTelnetAsync(NetworkStream stream)
+{
+    var buffer = new byte[1024];
+    while (true)
+    {
+        int read = await stream.ReadAsync(buffer, 0, buffer.Length);
+        if (read <= 0) break;
+
+        int i = 0;
+        while (i < read)
+        {
+            if (buffer[i] == TelnetCommands.IAC)
+            {
+                if (i + 2 >= read) break;
+
+                byte command = buffer[i + 1];
+                byte option = buffer[i + 2];
+
+                byte responseCommand;
+                if (command == TelnetCommands.DO)
+                    responseCommand = TelnetCommands.WONT;
+                else if (command == TelnetCommands.WILL)
+                    responseCommand = TelnetCommands.DONT;
+                else
+                {
+                    i += 3;
+                    continue;
+                }
+
+                byte[] response = new byte[]
+                {
+                    TelnetCommands.IAC,
+                    responseCommand,
+                    option
+                };
+
+                await stream.WriteAsync(response, 0, response.Length);
+
+                i += 3;
+            }
+            else
+            {
+                // Kalau bukan IAC, berarti mungkin bagian dari datastream
+                string rawHex = BitConverter.ToString(buffer, i, read - i).Replace("-", "");
+                OnRawDataReceived?.Invoke(rawHex);
+                break;
+            }
+        }
+    }
+}
+
+
+public async Task StartReadingAsync()
+{
+    if (sslStream != null)
+        await HandleTelnetAsync(sslStream);
+}
