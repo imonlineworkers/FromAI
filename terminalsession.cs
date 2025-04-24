@@ -71,7 +71,7 @@ public class TerminalSession
 
     private async Task HandleTelnetAsync(Stream stream)
     {
-        var buffer = new byte[2048];
+var buffer = new byte[2048];
         while (true)
         {
             int read = await stream.ReadAsync(buffer, 0, buffer.Length);
@@ -155,6 +155,7 @@ public class TerminalSession
                     Console.WriteLine("DATA >> " + hex);
                     break;
                 }
+
             }
         }
     }
