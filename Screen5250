@@ -39,3 +39,77 @@ public class Screen5250
                 Buffer[r, c] = new ScreenChar { Char = ' ' };
     }
 }
+
+public class FieldAttribute
+{
+    public int Row { get; set; }
+    public int Col { get; set; }
+    public bool Input { get; set; }
+    public bool Intensified { get; set; }
+    public bool Modified { get; set; }
+    public bool Display { get; set; }
+}
+
+public class ScreenParser
+{
+    private byte[] _buffer;
+    private Screen5250 _screen;
+
+    public ScreenParser(byte[] buffer)
+    {
+        _buffer = buffer;
+        _screen = new Screen5250();
+    }
+
+    public Screen5250 Parse()
+    {
+        int ptr = 0;
+        int row = 0, col = 0;
+
+        while (ptr < _buffer.Length)
+        {
+            byte b = _buffer[ptr++];
+
+            if (b == 0xF5) // Write to Display
+            {
+                ptr++; // skip WCC (Write Control Character)
+                continue;
+            }
+            else if (b == 0x11) // SBA
+            {
+                int addr = ((_buffer[ptr++] & 0x3F) << 6) | (_buffer[ptr++] & 0x3F);
+                row = addr / 80;
+                col = addr % 80;
+            }
+            else if (b == 0x1D) // SF (Start Field)
+            {
+                byte attr = _buffer[ptr++];
+                bool input = (attr & 0x20) == 0;
+                _screen.Buffer[row, col].IsFieldStart = true;
+                _screen.Buffer[row, col].IsInput = input;
+            }
+            else if (b >= 0x40 && b <= 0xFE)
+            {
+                char ch = EbcdicToAscii(b);
+                _screen.SetChar(row, col, ch);
+                col++;
+                if (col >= 80) { col = 0; row++; }
+            }
+        }
+
+        return _screen;
+    }
+
+    private char EbcdicToAscii(byte b)
+    {
+        // Sederhana, hanya subset (bisa diganti table real nanti)
+        string map = "................................ !\"#$%&'()*+,-./0123456789:;<=>?" +
+                     "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
+                     "`abcdefghijklmnopqrstuvwxyz{|}~.";
+
+        if (b >= 0x40 && b <= 0xFE)
+            return map[b - 0x40];
+        else
+            return '.';
+    }
+}
