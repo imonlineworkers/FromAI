@@ -99,6 +99,8 @@ var buffer = new byte[2048];
                     byte option = buffer[i + 2];
 
                     byte responseCommand;
+
+                    // Handling Telnet Commands DO/WILL/DO etc.
                     switch (command)
                     {
                         case TelnetCommands.DO:
@@ -138,6 +140,7 @@ var buffer = new byte[2048];
                     Console.WriteLine("DATA >> " + hex);
                     break;
                 }
+
 
             }
         }
