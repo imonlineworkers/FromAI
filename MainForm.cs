@@ -1,163 +1,91 @@
 using System;
+using System.Drawing;
 using System.Windows.Forms;
-using Auto5250net.Terminal;
 
-namespace Auto5250net.WinForms
+public partial class MainForm : Form
 {
-    public partial class MainForm : Form
-    {
-        private TerminalSession _session;
+    private TerminalSession _session;
+    private Screen5250 _screen;
 
     public MainForm()
     {
         InitializeComponent();
-        _session = new TerminalSession("your_ibm_host", 992);
-        _session.OnDataReceived += data =>
+        InitUI();
+    }
+
+    private void InitUI()
+    {
+        this.Text = "Auto5250net Emulator";
+        this.Width = 800;
+        this.Height = 400;
+
+        Panel panelScreen = new Panel
         {
-            string parsed = ParseToAscii(data);
-            DisplayOnGrid(parsed);
+            Name = "panelScreen",
+            Dock = DockStyle.Fill,
+            BackColor = Color.Black
+        };
+        panelScreen.Paint += panelScreen_Paint;
+        this.Controls.Add(panelScreen);
+
+        // Connect saat form load
+        this.Load += (s, e) =>
+        {
+            _session = new TerminalSession();
+            _session.DataReceived += OnDataReceived;
+            _session.Connect("your-ibmi-host"); // ganti host sesuai kebutuhan
         };
     }
 
-    private async void connectBtn_Click(object sender, EventArgs e)
+    private void OnDataReceived(byte[] data)
     {
-        await _session.ConnectAsync();
-    }
-}
-
-    private Label[,] screenLabels;
-
-    private void InitializeComponent()
-    {
-        this.Text = "Auto5250net - Emulator";
-        this.Size = new System.Drawing.Size(850, 550);
-
-        var connectBtn = new Button();
-        connectBtn.Text = "Connect";
-        connectBtn.Location = new System.Drawing.Point(10, 10);
-        connectBtn.Click += connectBtn_Click;
-        this.Controls.Add(connectBtn);
-
-        screenLabels = new Label[24, 80];
-        var startY = 50;
-        var font = new System.Drawing.Font("Consolas", 9);
-
-        for (int row = 0; row < 24; row++)
+        if (InvokeRequired)
         {
-            for (int col = 0; col < 80; col++)
-            {
-                var label = new Label();
-                label.Text = " ";
-                label.Font = font;
-                label.Size = new System.Drawing.Size(10, 16);
-                label.Location = new System.Drawing.Point(10 + col * 10, startY + row * 16);
-                this.Controls.Add(label);
-                screenLabels[row, col] = label;
-            }
-        }
-    }
-
-    private string ParseToAscii(string hexString)
-    {
-        var bytes = hexString.Split('-').Select(b => Convert.ToByte(b, 16)).ToArray();
-        var sb = new StringBuilder();
-
-        foreach (var b in bytes)
-        {
-            if (b >= 0x20 && b <= 0x7E)
-                sb.Append((char)b);
-            else
-                sb.Append(' ');
+            Invoke(() => OnDataReceived(data));
+            return;
         }
 
-        return sb.ToString();
+        var parser = new ScreenParser(data);
+        _screen = parser.Parse();
+
+        var panel = this.Controls["panelScreen"];
+        panel?.Invalidate();
     }
 
-    private void DisplayOnGrid(string asciiData)
+    private void panelScreen_Paint(object sender, PaintEventArgs e)
     {
-        int index = 0;
-        for (int row = 0; row < 24; row++)
+        if (_screen == null) return;
+
+        var g = e.Graphics;
+        g.Clear(Color.Black);
+
+        var font = new Font("Consolas", 10, FontStyle.Regular);
+        var brushNormal = new SolidBrush(Color.LawnGreen);
+        var brushReverse = new SolidBrush(Color.Black);
+        var backReverse = new SolidBrush(Color.LawnGreen);
+
+        int charWidth = 8;
+        int charHeight = 16;
+
+        for (int row = 0; row < Screen5250.Rows; row++)
         {
-            for (int col = 0; col < 80; col++)
+            for (int col = 0; col < Screen5250.Cols; col++)
             {
-                if (index < asciiData.Length)
+                var ch = _screen.Buffer[row, col];
+
+                int x = col * charWidth;
+                int y = row * charHeight;
+
+                if (ch.Reverse)
                 {
-                    screenLabels[row, col].Text = asciiData[index].ToString();
-                    index++;
+                    g.FillRectangle(backReverse, x, y, charWidth, charHeight);
+                    g.DrawString(ch.Char.ToString(), font, brushReverse, x, y);
+                }
+                else
+                {
+                    g.DrawString(ch.Char.ToString(), font, brushNormal, x, y);
                 }
             }
         }
-
     }
-}
-
-
-
-private readonly string host;
-private readonly int port;
-private SslStream sslStream;
-
-public Action<string> OnDataReceived;
-
-public TerminalSession(string host, int port)
-{
-    this.host = host;
-    this.port = port;
-}
-
-public async Task ConnectAsync()
-{
-    var client = new TcpClient();
-    await client.ConnectAsync(host, port);
-
-    sslStream = new SslStream(client.GetStream(), false,
-        new RemoteCertificateValidationCallback((s, cert, chain, sslErrors) => true));
-
-    await sslStream.AuthenticateAsClientAsync(host);
-    Console.WriteLine("Connected to IBM i");
-
-    _ = Task.Run(() => ReadLoop());
-}
-
-private async Task ReadLoop()
-{
-    var buffer = new byte[2048];
-    while (true)
-    {
-        int bytes = await sslStream.ReadAsync(buffer, 0, buffer.Length);
-        if (bytes <= 0) break;
-
-        int i = 0;
-        while (i < bytes)
-        {
-            if (buffer[i] == 255) // IAC
-            {
-                if (i + 2 >= bytes) break;
-                byte command = buffer[i + 1];
-                byte option = buffer[i + 2];
-
-                byte responseCmd = 0;
-                if (command == 253) // DO
-                    responseCmd = (option == 0x18 || option == 0x00) ? (byte)251 : (byte)252; // WILL / WONT
-                else if (command == 251) // WILL
-                    responseCmd = (option == 0x03) ? (byte)253 : (byte)254; // DO / DONT
-
-                byte[] response = new byte[] { 255, responseCmd, option };
-                await sslStream.WriteAsync(response, 0, response.Length);
-                i += 3;
-            }
-            else
-            {
-                string hex = BitConverter.ToString(buffer, i, bytes - i);
-                OnDataReceived?.Invoke(hex);
-                break;
-            }
-        }
-    }
-}
-
-public async Task SendRawAsync(byte[] data)
-{
-    await sslStream.WriteAsync(data, 0, data.Length);
-    await sslStream.FlushAsync();
 }
