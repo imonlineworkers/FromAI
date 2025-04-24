@@ -1,83 +1,82 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Text;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
-namespace Auto5250net.Terminal
+public class TerminalSession
 {
-    public class TerminalSession
-    {
-       private readonly string host;
-    private readonly int port;
-    private SslStream sslStream;
+    private TcpClient _client;
+    private SslStream _sslStream;
 
-    public Action<string> OnDataReceived;
+    public event Action<byte[]> DataReceived;
 
-    public TerminalSession(string host, int port)
+    public bool IsConnected => _client?.Connected ?? false;
+
+    public void Connect(string host, int port = 992)
     {
-        this.host = host;
-        this.port = port;
+        _client = new TcpClient();
+        _client.Connect(host, port);
+
+        _sslStream = new SslStream(
+            _client.GetStream(),
+            false,
+            new RemoteCertificateValidationCallback(ValidateServerCertificate),
+            null
+        );
+
+        _sslStream.AuthenticateAsClient(host);
+
+        Task.Run(() => ReceiveLoop());
     }
 
-    public async Task ConnectAsync()
+    private async Task ReceiveLoop()
     {
-        var client = new TcpClient();
-        await client.ConnectAsync(host, port);
-
-        sslStream = new SslStream(client.GetStream(), false,
-            new RemoteCertificateValidationCallback((s, cert, chain, sslErrors) => true));
-
-        await sslStream.AuthenticateAsClientAsync(host);
-        Console.WriteLine("Connected to IBM i");
-
-        _ = Task.Run(() => ReadLoop());
-    }
-
-    private async Task ReadLoop()
-    {
-        var buffer = new byte[2048];
-        while (true)
+        var buffer = new byte[8192];
+        try
         {
-            int bytes = await sslStream.ReadAsync(buffer, 0, buffer.Length);
-            if (bytes <= 0) break;
-
-            int i = 0;
-            while (i < bytes)
+            while (true)
             {
-                if (buffer[i] == 255) // IAC
-                {
-                    if (i + 2 >= bytes) break;
-                    byte command = buffer[i + 1];
-                    byte option = buffer[i + 2];
+                int bytesRead = await _sslStream.ReadAsync(buffer, 0, buffer.Length);
+                if (bytesRead <= 0) break;
 
-                    byte responseCmd = 0;
-                    if (command == 253) // DO
-                        responseCmd = (option == 0x18 || option == 0x00) ? (byte)251 : (byte)252; // WILL / WONT
-                    else if (command == 251) // WILL
-                        responseCmd = (option == 0x03) ? (byte)253 : (byte)254; // DO / DONT
-
-                    byte[] response = new byte[] { 255, responseCmd, option };
-                    await sslStream.WriteAsync(response, 0, response.Length);
-                    i += 3;
-                }
-                else
-                {
-                    string hex = BitConverter.ToString(buffer, i, bytes - i);
-                    OnDataReceived?.Invoke(hex);
-                    break;
-                }
+                byte[] data = buffer.Take(bytesRead).ToArray();
+                DataReceived?.Invoke(data);
             }
         }
-    }
-
-    public async Task SendRawAsync(byte[] data)
-    {
-        await sslStream.WriteAsync(data, 0, data.Length);
-        await sslStream.FlushAsync();
-    }
-
+        catch (Exception ex)
+        {
+            Console.WriteLine("Receive error: " + ex.Message);
         }
     }
 
+    public void SendData(byte[] data)
+    {
+        if (_sslStream != null && _sslStream.CanWrite)
+        {
+            _sslStream.Write(data, 0, data.Length);
+            _sslStream.Flush();
+        }
+    }
+
+    public void Disconnect()
+    {
+        try
+        {
+            _sslStream?.Close();
+            _client?.Close();
+        }
+        catch { }
+    }
+
+    private static bool ValidateServerCertificate(
+        object sender,
+        X509Certificate certificate,
+        X509Chain chain,
+        SslPolicyErrors sslPolicyErrors)
+    {
+        return true;
+    }
+}
