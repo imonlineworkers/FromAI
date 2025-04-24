@@ -1,0 +1,85 @@
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+using TerminalEmulator;
+
+public partial class MainForm : Form
+{
+    private ScreenRenderer _renderer;
+    private TerminalSession _session;
+    private byte[] _screenData;
+
+    public MainForm()
+    {
+        InitializeComponent();
+
+        // Setup Screen Renderer
+        _renderer = new ScreenRenderer();
+        _renderer.Location = new Point(10, 10);
+        Controls.Add(_renderer);
+
+        // Setup Terminal Session
+        _session = new TerminalSession("your.ibm.host.com", 992); // Ganti dengan alamat host dan port
+        _session.DataReceived += OnDataReceived;
+        _session.Connect();
+
+        // Test Button (bisa dihapus kalau udah jalan otomatis)
+        Button btnUpdate = new Button { Text = "Update Screen", Location = new Point(10, 300) };
+        btnUpdate.Click += (sender, e) => SimulateIncomingData();
+        Controls.Add(btnUpdate);
+    }
+
+    // Callback ketika data diterima dari server
+    private void OnDataReceived(object sender, byte[] data)
+    {
+        _screenData = data; // Simpan data yang diterima
+        UpdateFromHost(_screenData); // Update layar
+    }
+
+    // Update layar dengan data yang diterima
+    private void UpdateFromHost(byte[] screenBytes)
+    {
+        var parser = new ScreenParser(screenBytes);
+        var screen = parser.Parse();
+        _renderer.UpdateScreen(screen); // Render layar
+    }
+
+    // Simulasi data yang diterima dari server (testing saja)
+    private void SimulateIncomingData()
+    {
+        _screenData = new byte[]
+        {
+            0x11, 0x00, 0x50, 0x1D, 0x20, 0x40, 0xE2, 0xC1, 0xF1, 0x60, 0x21
+        };
+        UpdateFromHost(_screenData);
+    }
+
+    // Menangani input keyboard (kirim ke server)
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        byte[] dataToSend = null;
+
+        if (keyData == Keys.Enter)
+        {
+            dataToSend = new byte[] { 0x0D }; // Kirim Enter
+        }
+        else if (keyData != Keys.Shift && keyData != Keys.Control && keyData != Keys.Alt)
+        {
+            char keyChar = (char)keyData;
+            dataToSend = new byte[] { (byte)keyChar }; // Kirim karakter
+        }
+
+        if (dataToSend != null)
+        {
+            _session.SendData(dataToSend); // Kirim data ke server
+        }
+
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    // Paint event untuk update layar
+    private void OnPaint(object sender, PaintEventArgs e)
+    {
+        _renderer.Invalidate();
+    }
+}
