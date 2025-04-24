@@ -9,161 +9,75 @@ namespace Auto5250net.Terminal
 {
     public class TerminalSession
     {
-        private SslStream sslStream;
-        private TcpClient client;
+       private readonly string host;
+    private readonly int port;
+    private SslStream sslStream;
 
-        public event Action<string> OnRawDataReceived;
+    public Action<string> OnDataReceived;
 
-        public async Task ConnectAsync(string host, int port)
-        {
-            client = new TcpClient();
-            await client.ConnectAsync(host, port);
-
-            sslStream = new SslStream(client.GetStream(), false,
-                (sender, cert, chain, errors) => true);
-            await sslStream.AuthenticateAsClientAsync(host);
-        }
-
-        public async Task StartReadingAsync()
-        {
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-
-            while ((bytesRead = await sslStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-            {
-                string hex = BitConverter.ToString(buffer, 0, bytesRead);
-                OnRawDataReceived?.Invoke(hex);
-            }
-        }
-
-        public async Task SendAsync(byte[] data)
-        {
-            if (sslStream != null)
-            {
-                await sslStream.WriteAsync(data, 0, data.Length);
-            }
-        }
-    }
-}
-
-private async Task HandleTelnetAsync(Stream stream)
+    public TerminalSession(string host, int port)
     {
-using Auto5250net.Core;
-using System.Net.Security;
-using System.Text;
-using System.Collections.Generic;
-
-public class TerminalSession
-{
-    private readonly SslStream sslStream;
-
-    public event Action<string> OnRawDataReceived;
-
-    public TerminalSession(SslStream stream)
-    {
-        sslStream = stream;
+        this.host = host;
+        this.port = port;
     }
 
-    public async Task StartReadingAsync()
+    public async Task ConnectAsync()
     {
-        await HandleTelnetAsync(sslStream);
+        var client = new TcpClient();
+        await client.ConnectAsync(host, port);
+
+        sslStream = new SslStream(client.GetStream(), false,
+            new RemoteCertificateValidationCallback((s, cert, chain, sslErrors) => true));
+
+        await sslStream.AuthenticateAsClientAsync(host);
+        Console.WriteLine("Connected to IBM i");
+
+        _ = Task.Run(() => ReadLoop());
     }
 
-    private async Task HandleTelnetAsync(Stream stream)
+    private async Task ReadLoop()
     {
-var buffer = new byte[2048];
+        var buffer = new byte[2048];
         while (true)
         {
-            int read = await stream.ReadAsync(buffer, 0, buffer.Length);
-            if (read <= 0) break;
+            int bytes = await sslStream.ReadAsync(buffer, 0, buffer.Length);
+            if (bytes <= 0) break;
 
             int i = 0;
-            while (i < read)
+            while (i < bytes)
             {
-                if (buffer[i] == TelnetCommands.IAC)
+                if (buffer[i] == 255) // IAC
                 {
-                    if (i + 1 >= read) break;
-
+                    if (i + 2 >= bytes) break;
                     byte command = buffer[i + 1];
                     byte option = buffer[i + 2];
 
-                    if (command == TelnetCommands.SB) // Subnegotiation Start (SB)
-                    {
-                        int sbStart = i + 2;
-                        int sbEnd = Array.IndexOf(buffer, TelnetCommands.SE, sbStart); // Subnegotiation End (SE)
-                        if (sbEnd == -1) break; // incomplete, wait more
+                    byte responseCmd = 0;
+                    if (command == 253) // DO
+                        responseCmd = (option == 0x18 || option == 0x00) ? (byte)251 : (byte)252; // WILL / WONT
+                    else if (command == 251) // WILL
+                        responseCmd = (option == 0x03) ? (byte)253 : (byte)254; // DO / DONT
 
-                        byte subCmd = buffer[sbStart + 1];
-                        if (option == TelnetCommands.TERMINAL_TYPE && subCmd == 1) // SEND Terminal Type request
-                        {
-                            // Balas dengan informasi terminal type
-                            List<byte> response = new List<byte>
-                            {
-                                TelnetCommands.IAC, TelnetCommands.SB,
-                                TelnetCommands.TERMINAL_TYPE, 0 // IS Terminal Type
-                            };
-
-                            byte[] termType = Encoding.ASCII.GetBytes("IBM-3278-2-E");
-                            response.AddRange(termType); // Tambahkan terminal type ke response
-
-                            response.Add(TelnetCommands.IAC);
-                            response.Add(TelnetCommands.SE);
-
-                            await stream.WriteAsync(response.ToArray(), 0, response.Count);
-                        }
-
-                        i = sbEnd + 1; // Skip past SE
-                        continue;
-                    }
-
-                    // Handling perintah Telnet lainnya seperti DO, WILL, WONT, DONT
-                    byte responseCommand;
-                    switch (command)
-                    {
-                        case TelnetCommands.DO:
-                            responseCommand = option == TelnetCommands.BINARY || option == TelnetCommands.TERMINAL_TYPE
-                                ? TelnetCommands.WILL
-                                : TelnetCommands.WONT;
-                            break;
-
-                        case TelnetCommands.WILL:
-                            responseCommand = option == TelnetCommands.SUPPRESS_GO_AHEAD || option == TelnetCommands.BINARY
-                                ? TelnetCommands.DO
-                                : TelnetCommands.DONT;
-                            break;
-
-                        default:
-                            i += 3;
-                            continue;
-                    }
-
-                    byte[] response = new byte[]
-                    {
-                        TelnetCommands.IAC,
-                        responseCommand,
-                        option
-                    };
-
-                    await stream.WriteAsync(response, 0, response.Length);
+                    byte[] response = new byte[] { 255, responseCmd, option };
+                    await sslStream.WriteAsync(response, 0, response.Length);
                     i += 3;
                 }
                 else
                 {
-                    // Data 5250, ini untuk output layar
-                    string hex = BitConverter.ToString(buffer, i, read - i);
-                    OnRawDataReceived?.Invoke(hex);
-                    Console.WriteLine("DATA >> " + hex);
+                    string hex = BitConverter.ToString(buffer, i, bytes - i);
+                    OnDataReceived?.Invoke(hex);
                     break;
                 }
-
             }
         }
     }
-}
 
+    public async Task SendRawAsync(byte[] data)
+    {
+        await sslStream.WriteAsync(data, 0, data.Length);
+        await sslStream.FlushAsync();
+    }
 
-
-            }
         }
     }
 
