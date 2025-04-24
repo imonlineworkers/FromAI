@@ -1,0 +1,100 @@
+public class ScreenChar
+{
+    public char Char { get; set; }
+    public bool IsFieldStart { get; set; } = false;
+    public bool IsInput { get; set; } = false;
+    public bool Reverse { get; set; } = false;
+    public bool Underline { get; set; } = false;
+    public bool Blink { get; set; } = false;
+    public bool High { get; set; } = false;
+}
+
+public class Screen5250
+{
+    public const int Rows = 24;
+    public const int Cols = 80;
+    public ScreenChar[,] Buffer { get; set; } = new ScreenChar[Rows, Cols];
+
+    public Screen5250()
+    {
+        for (int r = 0; r < Rows; r++)
+            for (int c = 0; c < Cols; c++)
+                Buffer[r, c] = new ScreenChar { Char = ' ' };
+    }
+
+    public void SetChar(int row, int col, char ch, ScreenChar attr = null)
+    {
+        if (row >= 0 && row < Rows && col >= 0 && col < Cols)
+        {
+            Buffer[row, col] = attr != null ? attr : new ScreenChar();
+            Buffer[row, col].Char = ch;
+        }
+    }
+
+    public void Clear()
+    {
+        for (int r = 0; r < Rows; r++)
+            for (int c = 0; c < Cols; c++)
+                Buffer[r, c] = new ScreenChar { Char = ' ' };
+    }
+}
+
+public class ScreenParser
+{
+    private byte[] _buffer;
+    private Screen5250 _screen;
+
+    public ScreenParser(byte[] buffer)
+    {
+        _buffer = buffer;
+        _screen = new Screen5250();
+    }
+
+    public Screen5250 Parse()
+    {
+        int ptr = 0;
+        int row = 0, col = 0;
+
+        while (ptr < _buffer.Length)
+        {
+            byte b = _buffer[ptr++];
+
+            if (b == 0x11) // SBA
+            {
+                int addr = ((_buffer[ptr++] & 0x3F) << 6) | (_buffer[ptr++] & 0x3F);
+                row = addr / 80;
+                col = addr % 80;
+            }
+            else if (b == 0x1D) // SF (Start Field)
+            {
+                byte attr = _buffer[ptr++];
+                bool input = (attr & 0x20) == 0;
+                _screen.Buffer[row, col].IsFieldStart = true;
+                _screen.Buffer[row, col].IsInput = input;
+            }
+            else if (b >= 0x40 && b <= 0xFE)
+            {
+                char ch = EbcdicToAscii(b);
+                _screen.SetChar(row, col, ch);
+                col++;
+                if (col >= 80) { col = 0; row++; }
+            }
+        }
+
+        return _screen;
+    }
+
+    private char EbcdicToAscii(byte b)
+    {
+        // Sederhana, hanya subset (bisa diganti table real nanti)
+        string map = "................................ !" +
+                     ""#$%&'()*+,-./0123456789:;<=>?" +
+                     "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
+                     "`abcdefghijklmnopqrstuvwxyz{|}~.";
+
+        if (b >= 0x40 && b <= 0xFE)
+            return map[b - 0x40];
+        else
+            return '.';
+    }
+}
