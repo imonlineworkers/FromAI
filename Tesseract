@@ -1,0 +1,100 @@
+using System;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
+using System.Threading;
+using Tesseract;
+using WindowsInput;
+using WindowsInput.Native;
+
+class Program
+{
+    // ========== Windows API ==========
+    [DllImport("user32.dll")]
+    static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+    [DllImport("user32.dll")]
+    static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("Mencari window ACS...");
+
+        // 1. Cari window ACS (samakan judulnya dengan window ACS lo)
+        IntPtr hWnd = FindWindow(null, "IBM i Access Client Solutions");
+        if (hWnd == IntPtr.Zero)
+        {
+            Console.WriteLine("❌ Window ACS tidak ditemukan");
+            return;
+        }
+
+        // 2. Ambil ukuran window
+        GetWindowRect(hWnd, out RECT rect);
+        int width = rect.Right - rect.Left;
+        int height = rect.Bottom - rect.Top;
+
+        // 3. Screenshot area window
+        Bitmap bmp = new Bitmap(width, height);
+        using (Graphics g = Graphics.FromImage(bmp))
+        {
+            g.CopyFromScreen(rect.Left, rect.Top, 0, 0, bmp.Size, CopyPixelOperation.SourceCopy);
+        }
+
+        bmp.Save("acs_screen.png", ImageFormat.Png); // untuk debug
+
+        // 4. OCR
+        string tessDataPath = @"C:\Program Files\Tesseract-OCR\tessdata"; // ganti kalau perlu
+
+        string ocrText;
+        using (var engine = new TesseractEngine(tessDataPath, "eng", EngineMode.Default))
+        using (var img = PixConverter.ToPix(bmp))
+        using (var page = engine.Process(img))
+        {
+            ocrText = page.GetText();
+        }
+
+        Console.WriteLine("=== Hasil OCR ===");
+        Console.WriteLine(ocrText);
+
+        // 5. Cari baris berisi "DEV"
+        string[] lines = ocrText.Split('\n');
+        int devIndex = Array.FindIndex(lines, line => line.Contains("DEV", StringComparison.OrdinalIgnoreCase));
+        if (devIndex == -1)
+        {
+            Console.WriteLine("❌ DEV tidak ditemukan");
+            return;
+        }
+
+        Console.WriteLine($"✅ DEV ditemukan di baris ke-{devIndex}");
+
+        // 6. Simulasi tekan panah turun + input X
+        var sim = new InputSimulator();
+
+        // Delay supaya user lihat proses
+        Thread.Sleep(1500);
+
+        // Pindah ke baris ke-`devIndex`
+        for (int i = 0; i < devIndex; i++)
+        {
+            sim.Keyboard.KeyPress(VirtualKeyCode.DOWN);
+            Thread.Sleep(100);
+        }
+
+        // Ketik X
+        sim.Keyboard.TextEntry("X");
+        Thread.Sleep(200);
+
+        // Tekan Enter
+        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+
+        Console.WriteLine("✅ Environment DEV dipilih otomatis!");
+    }
+}
