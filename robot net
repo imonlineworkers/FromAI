@@ -1,144 +1,125 @@
-static void Main(string[] args)
+using System;
+using System.Diagnostics;
+using System.Threading;
+using WindowsInput;
+using WindowsInput.Native;
+using ClosedXML.Excel;
+using System.Collections.Generic;
+
+class Program
 {
-    var process = new Process();
-    process.StartInfo.FileName = "C:\\Users\\Public\\IBM\\ClientSolutions\\Start_Programs\\Windows_x86-64\\acslaunch_win-64.exe";
-    process.StartInfo.Arguments = "C:\\ProjectAXA\\Emulator\\HKAS02.hod";
-    process.StartInfo.UseShellExecute = false;
-    process.Start();
-
-    // Tunggu beberapa detik agar aplikasi terbuka
-    Thread.Sleep(20000);
-
-    var sim = new InputSimulator();
-
-    string username = "IBUSERS01";
-    foreach (char c in username)
+    static void Main(string[] args)
     {
-        sim.Keyboard.TextEntry(c);
-        Thread.Sleep(150); // Tunggu 100ms antara setiap karakter
+        StartACS();
+        Thread.Sleep(20000);
+
+        var sim = new InputSimulator();
+
+        Login(sim, "IBUSERS01", "ABCD1234");
+        Thread.Sleep(30000);
+        Login(sim, "IBUSERS01", "ABCD1234");
+
+        Thread.Sleep(5000);
+        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+        Thread.Sleep(5000);
+        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+        Thread.Sleep(7000);
+
+        for (int i = 0; i < 7; i++)
+        {
+            sim.Keyboard.KeyPress(VirtualKeyCode.DOWN);
+            Thread.Sleep(300);
+        }
+
+        sim.Keyboard.TextEntry("X");
+        Thread.Sleep(200);
+        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+        Thread.Sleep(500);
+
+        sim.Keyboard.KeyPress(VirtualKeyCode.NEXT); // Page Down
+        Thread.Sleep(500);
+
+        sim.Keyboard.TextEntry("21");
+        Thread.Sleep(500);
+        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+        Thread.Sleep(500);
+
+        sim.Keyboard.TextEntry("61");
+        Thread.Sleep(500);
+        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+        Thread.Sleep(500);
+
+        ProcessExcelAndInput(sim, @"C:\ProjectAXA\Ruli\AS400\RPA to RWS\Book1.xlsx");
     }
 
-    sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
-    Thread.Sleep(1000);
-
-    string password = "ABCD1234";
-    foreach (char c in password)
+    static void StartACS()
     {
-        sim.Keyboard.TextEntry(c);
-        Thread.Sleep(150); // Tunggu 100ms antara setiap karakter
-    }
-    sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-
-
-    Thread.Sleep(30000);
-
-    foreach (char c in username)
-    {
-        sim.Keyboard.TextEntry(c);
-        Thread.Sleep(150); // Tunggu 100ms antara setiap karakter
+        var process = new Process();
+        process.StartInfo.FileName = @"C:\Users\Public\IBM\ClientSolutions\Start_Programs\Windows_x86-64\acslaunch_win-64.exe";
+        process.StartInfo.Arguments = @"C:\ProjectAXA\Emulator\HKAS02.hod";
+        process.StartInfo.UseShellExecute = false;
+        process.Start();
     }
 
-    sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
-
-    foreach (char c in password)
+    static void Login(InputSimulator sim, string username, string password)
     {
-        sim.Keyboard.TextEntry(c);
-        Thread.Sleep(150); // Tunggu 100ms antara setiap karakter
-    }
-    sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-    Thread.Sleep(5000);
-
-    sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-
-    Thread.Sleep(5000);
-
-    sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-
-    Thread.Sleep(7000);
-
-    for (int i = 0; i < 7; i++)
-    {
-        sim.Keyboard.KeyPress(VirtualKeyCode.DOWN);
-        Thread.Sleep(300);
+        TypeSlow(sim, username);
+        sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+        Thread.Sleep(1000);
+        TypeSlow(sim, password);
+        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
     }
 
-    // Ketik X
-    sim.Keyboard.TextEntry("X");
-    Thread.Sleep(200);
-
-    // Tekan Enter
-    sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-
-    Thread.Sleep(500);
-
-    sim.Keyboard.KeyPress(VirtualKeyCode.NEXT);
-    Thread.Sleep(500);
-
-    sim.Keyboard.TextEntry("21");
-
-    Thread.Sleep(500);
-
-    // Tekan Enter
-    sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-
-
-    Thread.Sleep(500);
-
-    sim.Keyboard.TextEntry("61");
-    Thread.Sleep(500);
-    // Tekan Enter
-    sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-
-
-    Thread.Sleep(500);
-
-    var wb = new XLWorkbook(@"C:\ProjectAXA\Ruli\AS400\RPA to RWS\Book1.xlsx");
-    var ws = wb.Worksheet(1);
-
-    foreach (var row in ws.RowsUsed().Skip(1))
+    static void TypeSlow(InputSimulator sim, string text, int delay = 150)
     {
-        var pno = row.Cell(4).GetString().Trim();
-
-        foreach (char c in pno)
+        foreach (char c in text)
         {
             sim.Keyboard.TextEntry(c);
-            Thread.Sleep(150); // Tunggu 100ms antara setiap karakter
-
+            Thread.Sleep(delay);
         }
+    }
 
-        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+    static void ProcessExcelAndInput(InputSimulator sim, string path)
+    {
+        var wb = new XLWorkbook(path);
+        var ws = wb.Worksheet(1);
 
-        Thread.Sleep(8000);
-
-
-        sim.Keyboard.KeyPress(VirtualKeyCode.F5);
-
-        Thread.Sleep(8000);
-
-        var remark = row.Cell(7).GetString().Trim();
-
-        List<string> chunks = new List<string>();
-
-        int chunkSize = 75;
-
-        for (int i = 0; i < remark.Length; i += chunkSize)
+        foreach (var row in ws.RowsUsed().Skip(1))
         {
-            chunks.Add(remark.Substring(i, Math.Min(chunkSize, remark.Length - i)));
-        }
+            var pno = row.Cell(4).GetString().Trim();
+            if (string.IsNullOrWhiteSpace(pno)) continue;
 
-        foreach (var chunk in chunks)
-        {
-            foreach (char c in chunk)
+            TypeSlow(sim, pno);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(8000);
+
+            sim.Keyboard.KeyPress(VirtualKeyCode.F5);
+            Thread.Sleep(8000);
+
+            var remark = row.Cell(7).GetString().Trim();
+            if (string.IsNullOrWhiteSpace(remark)) continue;
+
+            List<string> chunks = SplitInChunks(remark, 75);
+
+            foreach (var chunk in chunks)
             {
-                sim.Keyboard.TextEntry(c);
-                Thread.Sleep(50); // Tunggu 100ms antara setiap karakter
+                TypeSlow(sim, chunk, 50);
             }
+
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(2000);
+
+            sim.Keyboard.KeyPress(VirtualKeyCode.F1);
         }
+    }
 
-        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-
-        Thread.Sleep(2000);
-
-        sim.Keyboard.KeyPress(VirtualKeyCode.F1);
+    static List<string> SplitInChunks(string text, int chunkSize)
+    {
+        var chunks = new List<string>();
+        for (int i = 0; i < text.Length; i += chunkSize)
+        {
+            chunks.Add(text.Substring(i, Math.Min(chunkSize, text.Length - i)));
+        }
+        return chunks;
     }
 }
