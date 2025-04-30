@@ -43,4 +43,51 @@
                Console.WriteLine($"Gagal mengirim email. Status code: {response.StatusCode}");
            }
 
+           //    var httpClientHandler = new HttpClientHandler
+           //    {
+           //        ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+           //    };
+
+           //    var httpClient = new HttpClient(httpClientHandler);
+
+           //    httpClient.DefaultRequestHeaders.Add("entity", "AMFS");
+           //    httpClient.DefaultRequestHeaders.Add("source", "ONEAXA");
+           //    httpClient.DefaultRequestHeaders.Add("requestid", Guid.NewGuid().ToString());
+
+           //    var requestUri = "https://wrdweb01/notify-services/notify/send";
+           //    var formData = new MultipartFormDataContent();
+           //    var jsonContent = new StringContent(
+           //        $@"{{
+           //    ""transactionDTTM"": ""{DateTime.Now:dd MMM yyyy}"",
+           //    ""message"": {{
+           //        ""transportType"": ""email"",
+           //        ""scheduledTime"": ""{DateTime.Now:dd MMM yyyy}"",
+           //        ""from"": {{
+           //            ""name"": ""AXA"",
+           //            ""address"": ""noreply@axa.co.id""
+           //        }},
+           //        ""recipient"": {{
+           //            ""to"": [
+           //                {{
+           //                    ""address"": ""ruli@axa-mandiri.co.id""
+           //                }}
+           //            ]
+           //        }},
+           //        ""subject"": ""Error dalam Pemrosesan Excel"",
+           //        ""body"": ""Terjadi kesalahan: {message}""
+           //    }}
+           //}}", Encoding.UTF8, "application/json");
+
+           //    formData.Add(jsonContent, "notify");
+
+           //    var response = await httpClient.PostAsync(requestUri, formData);
+
+           //    if (response.IsSuccessStatusCode)
+           //    {
+           //        Console.WriteLine("Email berhasil dikirim.");
+           //    }
+           //    else
+           //    {
+           //        Console.WriteLine($"Gagal mengirim email. Status code: {response.StatusCode}");
+           //    }
        }
