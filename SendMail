@@ -1,0 +1,46 @@
+       private static async Task SendEmail(string message)
+       {
+
+
+           var client = new RestClient("https://wrdweb01/notify-services/notify/send");
+           var request = new RestRequest("", Method.Post);
+
+           // Menambahkan header entity dengan nilai AMFS
+           request.AddHeader("entity", "AMFS");
+           request.AddHeader("source", "ONEAXA");
+           request.AddHeader("requestid", Guid.NewGuid().ToString());
+
+           var jsonContent = $@"{{
+            ""transactionDTTM"": ""{DateTime.Now:dd MMM yyyy}"",
+            ""message"": {{
+                ""transportType"": ""email"",
+                ""scheduledTime"": ""{DateTime.Now:dd MMM yyyy}"",
+                ""from"": {{
+                    ""name"": ""AXA MANDIRI"",
+                    ""address"": ""test_robot_net@axa.co.id""
+                }},
+                ""recipient"": {{
+                    ""to"": [
+                        {{
+                            ""address"": ""ruli@axa-mandiri.co.id""
+                        }}
+                    ]
+                }},
+                ""subject"": ""Error dalam Pemrosesan Excel"",
+                ""body"": ""Terjadi kesalahan: {message}""
+            }}
+        }}";
+
+           request.AddParameter("notify", jsonContent, ParameterType.RequestBody);
+
+           var response = await client.ExecuteAsync(request);
+           if (response.IsSuccessful)
+           {
+               Console.WriteLine("Email berhasil dikirim.");
+           }
+           else
+           {
+               Console.WriteLine($"Gagal mengirim email. Status code: {response.StatusCode}");
+           }
+
+       }
