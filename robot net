@@ -1,125 +1,300 @@
-using System;
+using ClosedXML.Excel;
+using Dapper;
+using Microsoft.Data.SqlClient;
+using Newtonsoft.Json;
 using System.Diagnostics;
-using System.Threading;
+using System.Drawing;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using System.Text;
+using Tesseract;
 using WindowsInput;
 using WindowsInput.Native;
-using ClosedXML.Excel;
-using System.Collections.Generic;
 
-class Program
+namespace ConsoleApp3
 {
-    static void Main(string[] args)
+    class Program
     {
-        StartACS();
-        Thread.Sleep(20000);
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
 
-        var sim = new InputSimulator();
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmGetWindowAttribute(
+            IntPtr hWnd,
+            int dwAttribute,
+            out RECT pvAttribute,
+            int cbAttribute);
 
-        Login(sim, "IBUSERS01", "ABCD1234");
-        Thread.Sleep(30000);
-        Login(sim, "IBUSERS01", "ABCD1234");
+        private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
-        Thread.Sleep(5000);
-        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-        Thread.Sleep(5000);
-        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-        Thread.Sleep(7000);
-
-        for (int i = 0; i < 7; i++)
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
         {
-            sim.Keyboard.KeyPress(VirtualKeyCode.DOWN);
-            Thread.Sleep(300);
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
         }
 
-        sim.Keyboard.TextEntry("X");
-        Thread.Sleep(200);
-        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-        Thread.Sleep(500);
+        static string connectionString = "Server=localhost;Database=RobotNetLog;Integrated Security=True;TrustServerCertificate=True;";
 
-        sim.Keyboard.KeyPress(VirtualKeyCode.NEXT); // Page Down
-        Thread.Sleep(500);
-
-        sim.Keyboard.TextEntry("21");
-        Thread.Sleep(500);
-        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-        Thread.Sleep(500);
-
-        sim.Keyboard.TextEntry("61");
-        Thread.Sleep(500);
-        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-        Thread.Sleep(500);
-
-        ProcessExcelAndInput(sim, @"C:\ProjectAXA\Ruli\AS400\RPA to RWS\Book1.xlsx");
-    }
-
-    static void StartACS()
-    {
-        var process = new Process();
-        process.StartInfo.FileName = @"C:\Users\Public\IBM\ClientSolutions\Start_Programs\Windows_x86-64\acslaunch_win-64.exe";
-        process.StartInfo.Arguments = @"C:\ProjectAXA\Emulator\HKAS02.hod";
-        process.StartInfo.UseShellExecute = false;
-        process.Start();
-    }
-
-    static void Login(InputSimulator sim, string username, string password)
-    {
-        TypeSlow(sim, username);
-        sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
-        Thread.Sleep(1000);
-        TypeSlow(sim, password);
-        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-    }
-
-    static void TypeSlow(InputSimulator sim, string text, int delay = 150)
-    {
-        foreach (char c in text)
+        [SupportedOSPlatform("windows")]
+        static async Task Main(string[] args)
         {
-            sim.Keyboard.TextEntry(c);
-            Thread.Sleep(delay);
-        }
-    }
+            await StartACSAsync();
+            await Task.Delay(10000);
 
-    static void ProcessExcelAndInput(InputSimulator sim, string path)
-    {
-        var wb = new XLWorkbook(path);
-        var ws = wb.Worksheet(1);
+            var sim = new InputSimulator();
 
-        foreach (var row in ws.RowsUsed().Skip(1))
-        {
-            var pno = row.Cell(4).GetString().Trim();
-            if (string.IsNullOrWhiteSpace(pno)) continue;
-
-            TypeSlow(sim, pno);
+            await LoginAsync(sim, "IBUSERS01", "ABCD1234");
+            await Task.Delay(10000);
+            await LoginAsync(sim, "IBUSERS01", "ABCD1234");
+            await Task.Delay(3000);
             sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-            Thread.Sleep(8000);
+            await Task.Delay(3000);
 
-            sim.Keyboard.KeyPress(VirtualKeyCode.F5);
-            Thread.Sleep(8000);
+            // Ambil screenshot dari jendela aktif
+            string imagePath = "screenshot.png";
+            CaptureActiveWindow(" - UAT", imagePath);
 
-            var remark = row.Cell(7).GetString().Trim();
-            if (string.IsNullOrWhiteSpace(remark)) continue;
+            // Membaca teks dari gambar menggunakan Tesseract OCR
+            string extractedText = ReadTextFromImage(imagePath);
 
-            List<string> chunks = SplitInChunks(remark, 75);
+            // Mencari kata dalam teks yang diekstrak
+            string wordToSearch = "allocated";
+            bool isWordFound = SearchWordInText(extractedText, wordToSearch);
+            Console.WriteLine($"Is the word '{wordToSearch}' found? " + isWordFound);
 
-            foreach (var chunk in chunks)
+            if (isWordFound)
             {
-                TypeSlow(sim, chunk, 50);
+                sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+                await Task.Delay(3000);
             }
 
+            for (int i = 0; i < 7; i++)
+            {
+                sim.Keyboard.KeyPress(VirtualKeyCode.DOWN);
+                await Task.Delay(300);
+            }
+
+            sim.Keyboard.TextEntry("X");
+            await Task.Delay(500);
             sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-            Thread.Sleep(2000);
+            await Task.Delay(500);
 
-            sim.Keyboard.KeyPress(VirtualKeyCode.F1);
+            sim.Keyboard.KeyPress(VirtualKeyCode.NEXT); // Page Down
+            await Task.Delay(500);
+
+            sim.Keyboard.TextEntry("21");
+            await Task.Delay(500);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            await Task.Delay(500);
+
+            sim.Keyboard.TextEntry("61");
+            await Task.Delay(500);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            await Task.Delay(500);
+
+            await ProcessExcelAndInputAsync(sim, @"C:\ProjectAXA\Ruli\AS400\RPA to RWS\testrobot.xlsx");
+
+            await SendEmail("Test Email").ConfigureAwait(false);
         }
-    }
 
-    static List<string> SplitInChunks(string text, int chunkSize)
-    {
-        var chunks = new List<string>();
-        for (int i = 0; i < text.Length; i += chunkSize)
+        [SupportedOSPlatform("windows")]
+        static void CaptureActiveWindow(string windowName, string filePath)
         {
-            chunks.Add(text.Substring(i, Math.Min(chunkSize, text.Length - i)));
+            IntPtr hWnd = FindWindow(null, windowName);
+            if (hWnd == IntPtr.Zero)
+            {
+                Console.WriteLine("Window not found!");
+                return;
+            }
+
+            _ = DwmGetWindowAttribute(hWnd, DWMWA_EXTENDED_FRAME_BOUNDS, out RECT rect, Marshal.SizeOf(typeof(RECT)));
+
+            int width = rect.Right - rect.Left;
+            int height = rect.Bottom - rect.Top;
+
+            using Bitmap bitmap = new(width, height);
+            using (Graphics g = Graphics.FromImage(bitmap))
+            {
+                g.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
+            }
+            bitmap.Save(filePath, System.Drawing.Imaging.ImageFormat.Png);
         }
-        return chunks;
+
+        static string ReadTextFromImage(string imagePath)
+        {
+            using var engine = new TesseractEngine(@"C:\ProjectAXA\Tesseract-OCR\tessdata\", "eng", EngineMode.Default);
+            using var img = Pix.LoadFromFile(imagePath);
+            using var page = engine.Process(img);
+            return page.GetText();
+        }
+
+        static bool SearchWordInText(string text, string word)
+        { return text.Contains(word, StringComparison.OrdinalIgnoreCase); }
+
+        static async Task StartACSAsync()
+        {
+            var process = new Process();
+            process.StartInfo.FileName = @"C:\Users\Public\IBM\ClientSolutions\Start_Programs\Windows_x86-64\acslaunch_win-64.exe";
+            process.StartInfo.Arguments = @"C:\ProjectAXA\Emulator\HKAS02.hod";
+            process.StartInfo.UseShellExecute = false;
+            process.Start();
+            await Task.CompletedTask;
+        }
+
+        static async Task LoginAsync(InputSimulator sim, string username, string password)
+        {
+            await TypeSlowAsync(sim, username);
+            sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+            await Task.Delay(1000);
+            await TypeSlowAsync(sim, password);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+        }
+
+        static async Task TypeSlowAsync(InputSimulator sim, string text, int delay = 50)
+        {
+            foreach (char c in text)
+            {
+                sim.Keyboard.TextEntry(c);
+                await Task.Delay(delay);
+            }
+        }
+
+        static async Task ProcessExcelAndInputAsync(InputSimulator sim, string path, int delay = 200)
+        {
+            using (var workbook = new XLWorkbook(path))
+            {
+                var worksheet = workbook.Worksheet(1);
+
+                var rows = worksheet.RangeUsed().RowsUsed().Skip(1); // Mengabaikan baris header
+
+                var data = rows.Select(
+                    row => new
+                    {
+                        CaseNumber = int.Parse(row.Cell(1).GetString()),
+                        CPNO = row.Cell(2).GetString(),
+                        DateTimeOpened = DateTime.Parse(row.Cell(3).GetString()),
+                        CreatedBy = row.Cell(4).GetString(),
+                        Description = row.Cell(5).GetString()
+                    })
+                    .ToList();
+
+                var maxCaseNumbers = data
+                .GroupBy(d => d.CPNO)
+                    .Select(
+                        g => new { CPNO = g.Key, MaxCase = g.OrderByDescending(d => d.CaseNumber).FirstOrDefault() });
+
+
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    foreach (var item in maxCaseNumbers)
+                    {
+                        var query = "INSERT INTO Cases (CaseNumber, CPNO, DateTimeOpened, CreatedBy, Description) VALUES (@CaseNumber, @CPNO, @DateTimeOpened, @CreatedBy, @Description)";
+                        connection.Execute(
+                            query,
+                            new
+                            {
+                                CaseNumber = item.MaxCase.CaseNumber,
+                                CPNO = item.CPNO,
+                                DateTimeOpened = item.MaxCase.DateTimeOpened,
+                                CreatedBy = item.MaxCase.CreatedBy,
+                                Description = item.MaxCase.Description
+                            });
+
+                        var pno = item.CPNO.Trim();
+
+                        if (string.IsNullOrWhiteSpace(pno))
+                            continue;
+
+                        await TypeSlowAsync(sim, pno);
+                        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+                        await Task.Delay(delay);
+
+                        sim.Keyboard.KeyPress(VirtualKeyCode.F5);
+                        await Task.Delay(delay);
+
+                        var remark = item.MaxCase.Description.Trim();
+                        if (string.IsNullOrWhiteSpace(remark))
+                            continue;
+
+                        List<string> chunks = SplitInChunks(remark, 75);
+
+                        foreach (var chunk in chunks)
+                        {
+                            await TypeSlowAsync(sim, chunk, 50);
+                        }
+
+                        sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+                        await Task.Delay(delay);
+
+                        sim.Keyboard.KeyPress(VirtualKeyCode.F1);
+                        await Task.Delay(delay);
+                    }
+                }
+            }
+        }
+
+        static List<string> SplitInChunks(string text, int chunkSize)
+        {
+            var chunks = new List<string>();
+            for (int i = 0; i < text.Length; i += chunkSize)
+            {
+                chunks.Add(text.Substring(i, Math.Min(chunkSize, text.Length - i)));
+            }
+            return chunks;
+        }
+
+        private static async Task SendEmail(string message)
+        {
+            var httpClientHandler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+            };
+
+            var httpClient = new HttpClient(httpClientHandler);
+
+            var requestUri = "https://wrdweb01/notify-services/notify/send";
+            var formData = new MultipartFormDataContent();
+
+            formData.Headers.Add("entity", "AMFS");
+            formData.Headers.Add("source", "ONEAXA");
+            formData.Headers.Add("requestid", Guid.NewGuid().ToString());
+
+            var emailMessage = new
+            {
+                transactionDTTM = DateTime.Now.ToString("dd MMM yyyy"),
+                message = new
+                {
+                    transportType = "email",
+                    scheduledTime = DateTime.Now.ToString("dd MMM yyyy"),
+                    from = new { name = "AXA", address = "noreply@axa.co.id" },
+                    recipient = new { to = new[] { new { address = "ruli@axa-mandiri.co.id" } } },
+                    subject = "Error dalam Pemrosesan Excel",
+                    body = $"Terjadi kesalahan: {message}"
+                }
+            };
+
+            var jsonContent = new StringContent(
+                JsonConvert.SerializeObject(emailMessage),
+                Encoding.UTF8,
+                "application/json");
+
+            formData.Add(jsonContent, "notify");
+
+            var response = await httpClient.PostAsync(requestUri, formData);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine("Email berhasil dikirim.");
+            }
+            else
+            {
+                Console.WriteLine($"Gagal mengirim email. Status code: {response.StatusCode}");
+            }
+        }
     }
 }
