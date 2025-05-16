@@ -1,0 +1,96 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<h1>Telnet Secure WebSocket Proxy</h1>
+<p>Connect to IBM i via Telnet Secure (port 992) using WebSocket.</p>
+
+<button onclick="connect()">Connect</button>
+<button onclick="disconnect()">Disconnect</button>
+
+<!-- Terminal container -->
+<div id="terminal" style="height: 400px; width: 100%; background-color:black;"></div>
+
+<!-- xterm.js styles and scripts -->
+<link rel="stylesheet" href="~/lib/xterm/xterm.css" />
+<script src="~/lib/xterm/xterm.js"></script>
+
+<script>
+        let socket;
+    const term = new Terminal({
+        cursorBlink: true,
+        fontFamily: 'monospace',
+        fontSize: 14,
+        theme: {
+            background: '#000000',
+            foreground: '#00FF00'
+        }
+    });
+
+    term.open(document.getElementById("terminal"));
+
+    function connect() {
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        socket = new WebSocket(protocol + "://" + window.location.host + "/ws");
+        socket.binaryType = "arraybuffer";
+
+        let loginPromptDetected = false;
+
+        socket.onopen = () => {
+            console.log("WebSocket connected.");
+            term.write('\r\nConnected to IBM i...\r\n');
+            term.focus();
+        };
+
+        socket.onmessage = (event) => {
+            let text;
+            if (event.data instanceof ArrayBuffer) {
+                text = new TextDecoder("utf-8").decode(event.data);
+            } else if (typeof event.data === "string") {
+                text = event.data;
+            }
+
+            term.write(text);
+
+            // Deteksi login screen
+            if (!loginPromptDetected && text.includes("Sign-on")) {
+                loginPromptDetected = true;
+
+                // Kirim Enter setelah delay
+                setTimeout(() => {
+                    socket.send("\r");
+                }, 500);
+            }
+        };
+
+        socket.onclose = () => {
+            console.log("WebSocket closed.");
+            term.write('\r\nDisconnected.\r\n');
+
+            // Bersihin terminal
+            setTimeout(() => {
+                term.clear();
+            }, 500);
+        };
+
+        socket.onerror = (e) => {
+            console.error("WebSocket error:", e);
+            term.write('\r\nWebSocket error.\r\n');
+        };
+
+        term.onData(data => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(data);
+            }
+        });
+    }
+
+    function disconnect() {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.close();
+        }
+    }
+
+</script>
